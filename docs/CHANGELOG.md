@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Dashboard Stat Widgets (Box-style)
+
+### Changed
+- Dashboard overview stats redesigned as compact colored box-style widgets (like LocationCard)
+- Stat cards: colored backgrounds (`bg-sky-50`, `bg-emerald-50`, `bg-amber-50`, `bg-red-50`), icon in white badge, label, bold value
+- Grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` — 2 per row on mobile, compact `p-2.5 sm:p-4`
+- Hover lift + shadow animation on stat widgets
+- Bottom panels (checked-out items + location status): tighter spacing, smaller text on mobile
+
+---
+
 ## [2026-07-16] — Pin Locations & Compact Mobile Grid
 
 ### Added

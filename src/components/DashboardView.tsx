@@ -33,28 +33,32 @@ export default function DashboardView({
       label: "إجمالي الأماكن",
       value: totalLocations,
       icon: MapPin,
-      color: "bg-sky-50 text-sky-600",
+      bg: "bg-sky-50",
+      textColor: "text-sky-700",
       iconColor: "text-sky-500",
     },
     {
       label: "إجمالي العناصر",
       value: totalItems,
       icon: Package,
-      color: "bg-emerald-50 text-emerald-600",
+      bg: "bg-emerald-50",
+      textColor: "text-emerald-700",
       iconColor: "text-emerald-500",
     },
     {
       label: "المستلمة",
       value: totalCheckedOut,
       icon: MinusCircle,
-      color: "bg-amber-50 text-amber-600",
+      bg: "bg-amber-50",
+      textColor: "text-amber-700",
       iconColor: "text-amber-500",
     },
     {
       label: "تنبيهات النقص",
       value: lowStockItems,
       icon: AlertTriangle,
-      color: "bg-red-50 text-red-600",
+      bg: "bg-red-50",
+      textColor: "text-red-700",
       iconColor: "text-red-500",
     },
   ];
@@ -72,39 +76,39 @@ export default function DashboardView({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <div
               key={stat.label}
-              className="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-4"
+              className={`${stat.bg} border border-transparent rounded-xl p-2.5 sm:p-4 text-right transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm`}
             >
-              <div
-                className={`w-10 h-10 rounded-lg ${stat.color} flex items-center justify-center shrink-0`}
-              >
-                <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+              <div className="flex items-start justify-between mb-2">
+                <span className={`text-[10px] sm:text-xs font-medium ${stat.textColor} opacity-80`}>
+                  {stat.label}
+                </span>
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/60 flex items-center justify-center`}>
+                  <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.iconColor}`} />
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-slate-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900 mt-0.5">
-                  {stat.value}
-                </p>
-              </div>
+              <p className="text-xl sm:text-2xl font-bold text-slate-900">
+                {stat.value}
+              </p>
             </div>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
         <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
-          <div className="flex flex-wrap items-center justify-between mb-4">
-            <h2 className="font-semibold text-slate-900">
+          <div className="flex flex-wrap items-center justify-between mb-3">
+            <h2 className="text-sm sm:font-semibold text-slate-900">
               العناصر المستلمة حالياً
             </h2>
             <button
               onClick={onNavigateToLocations}
-              className="text-xs text-sky-600 hover:text-sky-700 font-medium"
+              className="text-[11px] sm:text-xs text-sky-600 hover:text-sky-700 font-medium"
             >
               عرض كل الأماكن ←
             </button>
