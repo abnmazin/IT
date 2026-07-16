@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-07-16] — MAJOR: Complete System Restructuring — Warehouse + Visits
+
+### New Data Model
+- `WarehouseItem`, `Visit` (inactive/active/completed), `Box`, `BoxItem`
+- Removed: `Site`, `Location`, `InventoryItem` (old models)
+
+### New Pages (7 in Sidebar)
+1. لوحة التحكم — stats dashboard
+2. المخزن — central inventory CRUD
+3. الزيارات — visits list + detail + fill/return boxes
+4. سجل النقل — transfer log
+5. المستخدمين — user management
+6. الفئات — category management
+7. سجل النشاط — activity log
+
+### Visit Workflow
+- Activate → fill boxes from warehouse (qty decreases)
+- Deactivate → return items to warehouse (qty restored)
+- Boxes remain as record
+
+### Deleted Files
+- LocationsView, LocationCard, LocationDetailView, AddLocationModal
+- InventoryView, AddItemModal, TransferModal, SitesSettings
+
+### Build: 15.3 kB / 102 kB
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [2026-07-16] — Settings Split into Sidebar Navigation

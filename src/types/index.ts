@@ -41,41 +41,44 @@ export const defaultCategories: Category[] = [
   { id: "cat-10", key: "Docking Station", label: "محطة اتصال", serialTracked: true },
 ];
 
-export interface Site {
-  id: string;
-  name: string;
-}
-
-export type LocationType = "box" | "warehouse" | "shelf" | "room" | "other";
-
-export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
-  box: "صندوق",
-  warehouse: "مخزن",
-  shelf: "رف",
-  room: "غرفة",
-  other: "أخرى",
-};
-
-export interface Location {
-  id: string;
-  name: string;
-  type: LocationType;
-  siteId: string;
-  label?: string;
-  pinned?: boolean;
-}
-
-export interface InventoryItem {
+export interface WarehouseItem {
   id: string;
   name: string;
   category: ItemCategory;
   serialNumber?: string;
-  locationId: string;
-  expectedQty: number;
-  currentQty: number;
-  checkedOut: number;
-  checkedOutBy?: string;
-  checkedOutDate?: string;
+  totalQty: number;
+}
+
+export type VisitStatus = "inactive" | "active" | "completed";
+
+export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
+  inactive: "غير مفعلة",
+  active: "مفعلة",
+  completed: "مكتملة",
+};
+
+export interface Visit {
+  id: string;
+  name: string;
+  date: string;
+  status: VisitStatus;
+  boxes: Box[];
+}
+
+export interface Box {
+  id: string;
+  name: string;
+  label?: string;
+  items: BoxItem[];
+}
+
+export interface BoxItem {
+  warehouseItemId: string;
+  name: string;
+  category: ItemCategory;
+  serialNumber?: string;
+  qty: number;
+  returnedQty?: number;
 }
 
 export interface Transfer {
@@ -95,11 +98,10 @@ export interface TransferItem {
 
 export type View =
   | "dashboard"
-  | "locations"
-  | "inventory"
+  | "warehouse"
+  | "visits"
   | "transfers"
-  | "settings"
-  | "sites-settings"
+  | "users"
   | "categories-settings"
   | "activity-log";
 
@@ -124,13 +126,14 @@ export type ActivityType =
   | "return"
   | "transfer"
   | "add_item"
-  | "add_location"
-  | "add_site"
+  | "add_visit"
+  | "activate_visit"
+  | "deactivate_visit"
+  | "fill_box"
+  | "return_items"
   | "add_user"
   | "delete_user"
   | "edit_user"
-  | "delete_site"
-  | "edit_site"
   | "add_category"
   | "edit_category"
   | "delete_category";
@@ -140,13 +143,14 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   return: "إرجاع صنف",
   transfer: "نقل بين مواقع",
   add_item: "إضافة صنف",
-  add_location: "إضافة مكان",
-  add_site: "إضافة موقع",
+  add_visit: "إضافة زيارة",
+  activate_visit: "تفعيل زيارة",
+  deactivate_visit: "إيقاف زيارة",
+  fill_box: "تعبئة صندوق",
+  return_items: "إرجاع مواد للمخزن",
   add_user: "إضافة مستخدم",
   delete_user: "حذف مستخدم",
   edit_user: "تعديل مستخدم",
-  delete_site: "حذف موقع",
-  edit_site: "تعديل موقع",
   add_category: "إضافة فئة",
   edit_category: "تعديل فئة",
   delete_category: "حذف فئة",

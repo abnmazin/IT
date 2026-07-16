@@ -1,16 +1,13 @@
 "use client";
 
-import { Search, Bell, User as UserIcon, Menu, ChevronDown, MapPin, X } from "lucide-react";
-import { Site, User } from "@/types";
+import { Search, Bell, User as UserIcon, Menu, X } from "lucide-react";
+import { User } from "@/types";
 import { useState, useRef, useEffect } from "react";
 
 interface HeaderProps {
   searchQuery: string;
   onSearch: (query: string) => void;
   onMenuToggle: () => void;
-  sites: Site[];
-  selectedSiteId: string | null;
-  onSelectSite: (id: string | null) => void;
   currentUser?: User;
 }
 
@@ -18,35 +15,16 @@ export default function Header({
   searchQuery,
   onSearch,
   onMenuToggle,
-  sites,
-  selectedSiteId,
-  onSelectSite,
   currentUser,
 }: HeaderProps) {
-  const [siteDropdownOpen, setSiteDropdownOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setSiteDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
 
   useEffect(() => {
     if (mobileSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, [mobileSearchOpen]);
-
-  const currentSiteName = selectedSiteId
-    ? sites.find((s) => s.id === selectedSiteId)?.name ?? "موقع"
-    : "جميع المواقع";
 
   return (
     <>
@@ -58,63 +36,11 @@ export default function Header({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setSiteDropdownOpen((o) => !o)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 h-9 sm:h-10 rounded-lg bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
-          >
-            <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-            <span className="whitespace-nowrap max-w-[100px] sm:max-w-[180px] truncate">
-              {currentSiteName}
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${
-                siteDropdownOpen ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          {siteDropdownOpen && (
-            <div className="absolute top-full mt-1 right-0 w-56 sm:w-64 bg-white rounded-xl border border-slate-200 shadow-lg py-1 z-50">
-              <button
-                onClick={() => {
-                  onSelectSite(null);
-                  setSiteDropdownOpen(false);
-                }}
-                className={`w-full text-right px-4 py-2.5 text-sm transition-colors ${
-                  !selectedSiteId
-                    ? "bg-sky-50 text-sky-700 font-medium"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                جميع المواقع
-              </button>
-              <div className="border-t border-slate-100 my-1" />
-              {sites.map((site) => (
-                <button
-                  key={site.id}
-                  onClick={() => {
-                    onSelectSite(site.id);
-                    setSiteDropdownOpen(false);
-                  }}
-                  className={`w-full text-right px-4 py-2.5 text-sm transition-colors truncate ${
-                    selectedSiteId === site.id
-                      ? "bg-sky-50 text-sky-700 font-medium"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {site.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
         <div className="hidden sm:block relative flex-1 max-w-md">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="بحث عن أماكن، عناصر..."
+            placeholder="بحث في المخزن والزيارات..."
             value={searchQuery}
             onChange={(e) => onSearch(e.target.value)}
             className="w-full h-10 pr-9 pl-4 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400 transition-colors"
@@ -157,7 +83,7 @@ export default function Header({
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="بحث عن أماكن، عناصر..."
+                placeholder="بحث في المخزن والزيارات..."
                 value={searchQuery}
                 onChange={(e) => onSearch(e.target.value)}
                 className="w-full h-10 pr-9 pl-4 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400"

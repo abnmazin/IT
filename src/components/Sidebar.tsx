@@ -3,11 +3,10 @@
 import { View } from "@/types";
 import {
   LayoutDashboard,
+  Warehouse,
   MapPin,
-  Boxes,
   Truck,
-  Settings,
-  Globe,
+  Users,
   Tag,
   ClipboardList,
   ChevronLeft,
@@ -17,14 +16,13 @@ import {
 
 const navItems: { id: View; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
-  { id: "locations", label: "الأماكن", icon: MapPin },
-  { id: "inventory", label: "المخزون", icon: Boxes },
-  { id: "transfers", label: "عمليات النقل", icon: Truck },
+  { id: "warehouse", label: "المخزن", icon: Warehouse },
+  { id: "visits", label: "الزيارات", icon: MapPin },
+  { id: "transfers", label: "سجل النقل", icon: Truck },
 ];
 
 const bottomItems: { id: View; label: string; icon: React.ElementType }[] = [
-  { id: "settings", label: "المستخدمين", icon: Settings },
-  { id: "sites-settings", label: "المواقع", icon: Globe },
+  { id: "users", label: "المستخدمين", icon: Users },
   { id: "categories-settings", label: "الفئات", icon: Tag },
   { id: "activity-log", label: "سجل النشاط", icon: ClipboardList },
 ];

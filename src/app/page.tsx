@@ -3,9 +3,10 @@
 import { useState, useCallback, useMemo } from "react";
 import {
   View,
-  Site,
-  Location,
-  InventoryItem,
+  WarehouseItem,
+  Visit,
+  Box,
+  BoxItem,
   Transfer,
   TransferItem,
   User,
@@ -15,10 +16,8 @@ import {
   ActivityType,
 } from "@/types";
 import {
-  initialSites,
-  initialLocations,
-  initialItems,
-  initialTransfers,
+  initialWarehouseItems,
+  initialVisits,
   initialUsers,
   initialActivityLog,
 } from "@/data/mockData";
@@ -26,11 +25,11 @@ import { defaultCategories } from "@/types";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import DashboardView from "@/components/DashboardView";
-import LocationsView from "@/components/LocationsView";
-import InventoryView from "@/components/InventoryView";
+import WarehouseView from "@/components/WarehouseView";
+import VisitsView from "@/components/VisitsView";
+import VisitDetailView from "@/components/VisitDetailView";
 import TransfersView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
-import SitesSettings from "@/components/SitesSettings";
 import CategoriesSettings from "@/components/CategoriesSettings";
 import ActivityLogView from "@/components/ActivityLogView";
 
@@ -47,16 +46,14 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
 
-  const [sites, setSites] = useState<Site[]>(initialSites);
-  const [locations, setLocations] = useState<Location[]>(initialLocations);
-  const [items, setItems] = useState<InventoryItem[]>(initialItems);
-  const [transfers, setTransfers] = useState<Transfer[]>(initialTransfers);
+  const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>(initialWarehouseItems);
+  const [visits, setVisits] = useState<Visit[]>(initialVisits);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [activityLog, setActivityLog] =
-    useState<ActivityLogEntry[]>(initialActivityLog);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>(initialActivityLog);
 
   const currentUser = useMemo(() => users[0], [users]);
 
@@ -76,196 +73,225 @@ export default function Home() {
     [currentUser]
   );
 
-  const filteredLocations = useMemo(() => {
-    if (!selectedSiteId) return locations;
-    return locations.filter((l) => l.siteId === selectedSiteId);
-  }, [locations, selectedSiteId]);
-
-  const filteredItems = useMemo(() => {
-    const locIds = new Set(filteredLocations.map((l) => l.id));
-    return items.filter((i) => locIds.has(i.locationId));
-  }, [items, filteredLocations]);
-
-  const siteName = useMemo(() => {
-    if (!selectedSiteId) return "جميع المواقع";
-    return sites.find((s) => s.id === selectedSiteId)?.name ?? "جميع المواقع";
-  }, [sites, selectedSiteId]);
-
-  const getItemName = useCallback(
-    (itemId: string) => items.find((i) => i.id === itemId)?.name ?? "—",
-    [items]
+  const selectedVisit = useMemo(
+    () => visits.find((v) => v.id === selectedVisitId) || null,
+    [visits, selectedVisitId]
   );
 
-  const handleUpdateItemQty = useCallback(
-    (itemId: string, delta: number) => {
-      const itemName = getItemName(itemId);
-      setItems((prev) =>
-        prev.map((item) => {
-          if (item.id !== itemId) return item;
-          const newQty = Math.max(
-            0,
-            Math.min(item.expectedQty, item.currentQty + delta)
-          );
-          return {
-            ...item,
-            currentQty: newQty,
-            checkedOut: item.expectedQty - newQty,
-          };
-        })
-      );
-      logActivity(
-        delta > 0 ? "return" : "checkout",
-        `${delta > 0 ? "إرجاع" : "سحب"} ${itemName} (${delta > 0 ? "+" : "-"}${Math.abs(delta)})`
-      );
-    },
-    [getItemName, logActivity]
+  const filteredWarehouseItems = useMemo(() => {
+    if (!searchQuery) return warehouseItems;
+    const q = searchQuery.toLowerCase();
+    return warehouseItems.filter(
+      (i) =>
+        i.name.toLowerCase().includes(q) ||
+        i.category.toLowerCase().includes(q) ||
+        (i.serialNumber && i.serialNumber.toLowerCase().includes(q))
+    );
+  }, [warehouseItems, searchQuery]);
+
+  const filteredVisits = useMemo(() => {
+    if (!searchQuery) return visits;
+    const q = searchQuery.toLowerCase();
+    return visits.filter((v) => v.name.toLowerCase().includes(q));
+  }, [visits, searchQuery]);
+
+  const totalWarehouseQty = warehouseItems.reduce((a, i) => a + i.totalQty, 0);
+  const activeVisitCount = visits.filter((v) => v.status === "active").length;
+  const totalBoxItems = visits.reduce(
+    (a, v) => a + v.boxes.reduce((b, box) => b + box.items.reduce((c, i) => c + i.qty, 0), 0),
+    0
   );
 
-  const handleCheckoutItem = useCallback(
-    (itemId: string, by: string) => {
-      const itemName = getItemName(itemId);
-      setItems((prev) =>
-        prev.map((item) => {
-          if (item.id !== itemId) return item;
-          return {
-            ...item,
-            currentQty: 0,
-            checkedOut: item.expectedQty,
-            checkedOutBy: by,
-            checkedOutDate: today(),
-          };
-        })
-      );
-      logActivity(
-        "checkout",
-        `سحب ${itemName} بواسطة ${by}`,
-        `رقم تسلسلي: ${items.find((i) => i.id === itemId)?.serialNumber ?? "—"}`
-      );
-    },
-    [getItemName, items, logActivity]
-  );
-
-  const handleReturnItem = useCallback(
-    (itemId: string) => {
-      const item = items.find((i) => i.id === itemId);
-      const itemName = item?.name ?? "—";
-      setItems((prev) =>
-        prev.map((it) => {
-          if (it.id !== itemId) return it;
-          return {
-            ...it,
-            currentQty: it.expectedQty,
-            checkedOut: 0,
-            checkedOutBy: undefined,
-            checkedOutDate: undefined,
-          };
-        })
-      );
-      logActivity(
-        "return",
-        `إرجاع ${itemName}`,
-        item?.checkedOutBy ? `كان مستلماً بواسطة: ${item.checkedOutBy}` : undefined
-      );
-    },
-    [items, logActivity]
-  );
-
-  const handleAddLocation = useCallback(
-    (name: string, type: Location["type"], siteId: string, label?: string) => {
-      const newLoc: Location = {
-        id: `loc-${Date.now()}`,
+  const handleAddWarehouseItem = useCallback(
+    (name: string, category: string, serialNumber: string, totalQty: number) => {
+      const newItem: WarehouseItem = {
+        id: `wh-${Date.now()}`,
         name,
-        type,
-        siteId,
-        label,
+        category: category as WarehouseItem["category"],
+        serialNumber: serialNumber || undefined,
+        totalQty,
       };
-      setLocations((prev) => [...prev, newLoc]);
-      const siteLabel = sites.find((s) => s.id === siteId)?.name ?? siteId;
-      logActivity(
-        "add_location",
-        `إضافة مكان جديد: ${name}`,
-        `الموقع: ${siteLabel}`
-      );
+      setWarehouseItems((prev) => [...prev, newItem]);
+      logActivity("add_item", `إضافة صنف للمخزن: ${name}`, `الكمية: ${totalQty}`);
     },
-    [sites, logActivity]
+    [logActivity]
   );
 
-  const handleAddItem = useCallback(
-    (
-      name: string,
-      category: InventoryItem["category"],
-      locationId: string,
-      serialNumber?: string,
-      qty: number = 1
-    ) => {
-      const newItem: InventoryItem = {
-        id: `item-${Date.now()}`,
+  const handleEditWarehouseItem = useCallback(
+    (id: string, name: string, category: string, serialNumber: string, totalQty: number) => {
+      setWarehouseItems((prev) =>
+        prev.map((i) =>
+          i.id === id
+            ? { ...i, name, category: category as WarehouseItem["category"], serialNumber: serialNumber || undefined, totalQty }
+            : i
+        )
+      );
+      logActivity("add_item", `تعديل صنف في المخزن: ${name}`);
+    },
+    [logActivity]
+  );
+
+  const handleDeleteWarehouseItem = useCallback(
+    (id: string) => {
+      const item = warehouseItems.find((i) => i.id === id);
+      setWarehouseItems((prev) => prev.filter((i) => i.id !== id));
+      if (item) {
+        logActivity("add_item", `حذف صنف من المخزن: ${item.name}`);
+      }
+    },
+    [warehouseItems, logActivity]
+  );
+
+  const handleAddVisit = useCallback(
+    (name: string, date: string) => {
+      const newVisit: Visit = {
+        id: `visit-${Date.now()}`,
         name,
-        category,
-        serialNumber,
-        locationId,
-        expectedQty: qty,
-        currentQty: qty,
-        checkedOut: 0,
+        date,
+        status: "inactive",
+        boxes: [],
       };
-      setItems((prev) => [...prev, newItem]);
-      const locName = locations.find((l) => l.id === locationId)?.name ?? "";
-      logActivity(
-        "add_item",
-        `إضافة صنف: ${name}`,
-        `المكان: ${locName}${serialNumber ? ` · الرقم التسلسلي: ${serialNumber}` : ""}`
-      );
+      setVisits((prev) => [...prev, newVisit]);
+      logActivity("add_visit", `إضافة زيارة جديدة: ${name}`);
     },
-    [locations, logActivity]
+    [logActivity]
   );
 
-  const handleTransferItems = useCallback(
-    (
-      itemIds: string[],
-      fromSiteId: string,
-      toSiteId: string,
-      fromLocationId: string
-    ) => {
-      const transferItems: TransferItem[] = itemIds
-        .map((id) => items.find((i) => i.id === id))
-        .filter(Boolean)
-        .map((item) => ({
-          itemId: item!.id,
-          itemName: item!.name,
-          serialNumber: item!.serialNumber,
-          fromLocationId,
-        }));
+  const handleToggleVisit = useCallback(
+    (visitId: string) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          const newStatus = v.status === "active" ? "completed" : "active";
+          return { ...v, status: newStatus };
+        })
+      );
+      const visit = visits.find((v) => v.id === visitId);
+      if (visit) {
+        const newStatus = visit.status === "active" ? "completed" : "active";
+        logActivity(
+          newStatus === "active" ? "activate_visit" : "deactivate_visit",
+          `${newStatus === "active" ? "تفعيل" : "إيقاف"} زيارة: ${visit.name}`
+        );
+      }
+    },
+    [visits, logActivity]
+  );
 
-      const transfer: Transfer = {
-        id: `tr-${Date.now()}`,
-        date: today(),
-        fromSiteId,
-        toSiteId,
-        items: transferItems,
-      };
-      setTransfers((prev) => [transfer, ...prev]);
-
-      const fromName = sites.find((s) => s.id === fromSiteId)?.name ?? "";
-      const toName = sites.find((s) => s.id === toSiteId)?.name ?? "";
-      const itemNames = transferItems.map((t) => t.itemName).join(" + ");
+  const handleFillBox = useCallback(
+    (visitId: string, boxId: string, items: BoxItem[]) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            boxes: v.boxes.map((b) => {
+              if (b.id !== boxId) return b;
+              return { ...b, items: [...b.items, ...items] };
+            }),
+          };
+        })
+      );
+      setWarehouseItems((prev) =>
+        prev.map((wh) => {
+          const filled = items.find((i) => i.warehouseItemId === wh.id);
+          if (filled) {
+            return { ...wh, totalQty: Math.max(0, wh.totalQty - filled.qty) };
+          }
+          return wh;
+        })
+      );
+      const visit = visits.find((v) => v.id === visitId);
+      const box = visit?.boxes.find((b) => b.id === boxId);
+      const itemNames = items.map((i) => `${i.name}(${i.qty})`).join(" + ");
       logActivity(
-        "transfer",
-        `نقل ${itemNames} إلى ${toName}`,
-        `من ${fromName}`
+        "fill_box",
+        `تعبئة ${box?.name || "صندوق"} — ${itemNames}`,
+        visit?.name
       );
     },
-    [items, sites, logActivity]
+    [visits, logActivity]
+  );
+
+  const handleReturnItems = useCallback(
+    (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            boxes: v.boxes.map((b) => {
+              if (b.id !== boxId) return b;
+              return {
+                ...b,
+                items: b.items
+                  .map((bi) => {
+                    const ret = returned.find((r) => r.warehouseItemId === bi.warehouseItemId);
+                    if (ret) {
+                      return { ...bi, qty: bi.qty - ret.qty, returnedQty: ret.qty };
+                    }
+                    return bi;
+                  })
+                  .filter((bi) => bi.qty > 0),
+              };
+            }),
+          };
+        })
+      );
+      setWarehouseItems((prev) =>
+        prev.map((wh) => {
+          const ret = returned.find((r) => r.warehouseItemId === wh.id);
+          if (ret) {
+            return { ...wh, totalQty: wh.totalQty + ret.qty };
+          }
+          return wh;
+        })
+      );
+      const visit = visits.find((v) => v.id === visitId);
+      logActivity(
+        "return_items",
+        `إرجاع مواد من صندوق ${boxId} للمخزن`,
+        visit?.name
+      );
+    },
+    [visits, logActivity]
+  );
+
+  const handleAddBox = useCallback(
+    (visitId: string, name: string, label: string) => {
+      const newBox: Box = {
+        id: `box-${Date.now()}`,
+        name,
+        label: label || undefined,
+        items: [],
+      };
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return { ...v, boxes: [...v.boxes, newBox] };
+        })
+      );
+      logActivity("fill_box", `إضافة صندوق جديد: ${name}`);
+    },
+    [logActivity]
+  );
+
+  const handleDeleteBox = useCallback(
+    (visitId: string, boxId: string) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return { ...v, boxes: v.boxes.filter((b) => b.id !== boxId) };
+        })
+      );
+      logActivity("fill_box", `حذف صندوق: ${boxId}`);
+    },
+    [logActivity]
   );
 
   const handleAddUser = useCallback(
     (name: string, email: string, role: UserRole) => {
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        name,
-        email,
-        role,
-        active: true,
-      };
+      const newUser: User = { id: `user-${Date.now()}`, name, email, role, active: true };
       setUsers((prev) => [...prev, newUser]);
       logActivity("add_user", `إضافة مستخدم جديد: ${name}`, `الدور: ${role}`);
     },
@@ -274,9 +300,7 @@ export default function Home() {
 
   const handleEditUser = useCallback(
     (id: string, name: string, email: string, role: UserRole) => {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, name, email, role } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, name, email, role } : u)));
       logActivity("edit_user", `تعديل بيانات المستخدم: ${name}`);
     },
     [logActivity]
@@ -286,75 +310,23 @@ export default function Home() {
     (id: string) => {
       const user = users.find((u) => u.id === id);
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      if (user) {
-        logActivity("delete_user", `حذف المستخدم: ${user.name}`);
-      }
+      if (user) logActivity("delete_user", `حذف المستخدم: ${user.name}`);
     },
     [users, logActivity]
   );
 
   const handleToggleUser = useCallback(
     (id: string) => {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u)));
       const user = users.find((u) => u.id === id);
-      if (user) {
-        logActivity(
-          "edit_user",
-          `${user.active ? "تعطيل" : "تفعيل"} حساب المستخدم: ${user.name}`
-        );
-      }
+      if (user) logActivity("edit_user", `${user.active ? "تعطيل" : "تفعيل"} حساب: ${user.name}`);
     },
     [users, logActivity]
   );
 
-  const handleAddSite = useCallback(
-    (name: string) => {
-      const newSite: Site = { id: `site-${Date.now()}`, name };
-      setSites((prev) => [...prev, newSite]);
-      logActivity("add_site", `إضافة موقع جديد: ${name}`);
-    },
-    [logActivity]
-  );
-
-  const handleEditSite = useCallback(
-    (id: string, name: string) => {
-      setSites((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, name } : s))
-      );
-      logActivity("edit_site", `تعديل الموقع: ${name}`);
-    },
-    [logActivity]
-  );
-
-  const handleDeleteSite = useCallback(
-    (id: string) => {
-      const site = sites.find((s) => s.id === id);
-      setSites((prev) => prev.filter((s) => s.id !== id));
-      if (site) {
-        logActivity("delete_site", `حذف الموقع: ${site.name}`);
-      }
-    },
-    [sites, logActivity]
-  );
-
-  const handleTogglePin = useCallback((locationId: string) => {
-    setLocations((prev) =>
-      prev.map((loc) =>
-        loc.id === locationId ? { ...loc, pinned: !loc.pinned } : loc
-      )
-    );
-  }, []);
-
   const handleAddCategory = useCallback(
     (key: string, label: string, serialTracked: boolean) => {
-      const newCat: Category = {
-        id: `cat-${Date.now()}`,
-        key: key as Category["key"],
-        label,
-        serialTracked,
-      };
+      const newCat: Category = { id: `cat-${Date.now()}`, key: key as Category["key"], label, serialTracked };
       setCategories((prev) => [...prev, newCat]);
       logActivity("add_category", `إضافة فئة جديدة: ${label}`);
     },
@@ -364,9 +336,7 @@ export default function Home() {
   const handleEditCategory = useCallback(
     (id: string, key: string, label: string, serialTracked: boolean) => {
       setCategories((prev) =>
-        prev.map((c) =>
-          c.id === id ? { ...c, key: key as Category["key"], label, serialTracked } : c
-        )
+        prev.map((c) => (c.id === id ? { ...c, key: key as Category["key"], label, serialTracked } : c))
       );
       logActivity("edit_category", `تعديل الفئة: ${label}`);
     },
@@ -377,21 +347,25 @@ export default function Home() {
     (id: string) => {
       const cat = categories.find((c) => c.id === id);
       setCategories((prev) => prev.filter((c) => c.id !== id));
-      if (cat) {
-        logActivity("delete_category", `حذف الفئة: ${cat.label}`);
-      }
+      if (cat) logActivity("delete_category", `حذف الفئة: ${cat.label}`);
     },
     [categories, logActivity]
+  );
+
+  const handleNavigate = useCallback(
+    (view: View) => {
+      setActiveView(view);
+      setSelectedVisitId(null);
+      setMobileMenuOpen(false);
+    },
+    []
   );
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         activeView={activeView}
-        onNavigate={(v) => {
-          setActiveView(v);
-          setMobileMenuOpen(false);
-        }}
+        onNavigate={handleNavigate}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed((c) => !c)}
         mobileOpen={mobileMenuOpen}
@@ -407,53 +381,55 @@ export default function Home() {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
-          sites={sites}
-          selectedSiteId={selectedSiteId}
-          onSelectSite={setSelectedSiteId}
           currentUser={currentUser}
         />
 
         <main className="flex-1 overflow-y-auto">
           {activeView === "dashboard" && (
             <DashboardView
-              sites={sites}
-              locations={filteredLocations}
-              items={filteredItems}
-              siteName={siteName}
-              onNavigateToLocations={() => setActiveView("locations")}
+              totalWarehouseItems={warehouseItems.length}
+              totalWarehouseQty={totalWarehouseQty}
+              activeVisitCount={activeVisitCount}
+              totalBoxItems={totalBoxItems}
+              onNavigateToWarehouse={() => handleNavigate("warehouse")}
+              onNavigateToVisits={() => handleNavigate("visits")}
             />
           )}
-          {activeView === "locations" && (
-            <LocationsView
-              sites={sites}
-              locations={filteredLocations}
-              items={items}
-              currentUser={currentUser}
+          {activeView === "warehouse" && (
+            <WarehouseView
+              items={filteredWarehouseItems}
               categories={categories}
               searchQuery={searchQuery}
-              selectedSiteId={selectedSiteId}
-              onUpdateItemQty={handleUpdateItemQty}
-              onCheckoutItem={handleCheckoutItem}
-              onReturnItem={handleReturnItem}
-              onAddLocation={handleAddLocation}
-              onAddItem={handleAddItem}
-              onTransferItems={handleTransferItems}
-              onTogglePin={handleTogglePin}
+              onAddItem={handleAddWarehouseItem}
+              onEditItem={handleEditWarehouseItem}
+              onDeleteItem={handleDeleteWarehouseItem}
             />
           )}
-          {activeView === "inventory" && (
-            <InventoryView
-              sites={sites}
-              locations={locations}
-              items={filteredItems}
+          {activeView === "visits" && !selectedVisitId && (
+            <VisitsView
+              visits={filteredVisits}
+              onSelectVisit={setSelectedVisitId}
+              onAddVisit={handleAddVisit}
+              onToggleVisit={handleToggleVisit}
+            />
+          )}
+          {activeView === "visits" && selectedVisit && (
+            <VisitDetailView
+              visit={selectedVisit}
+              warehouseItems={warehouseItems}
               categories={categories}
-              searchQuery={searchQuery}
+              onBack={() => setSelectedVisitId(null)}
+              onToggleVisit={handleToggleVisit}
+              onFillBox={handleFillBox}
+              onReturnItems={handleReturnItems}
+              onAddBox={handleAddBox}
+              onDeleteBox={handleDeleteBox}
             />
           )}
           {activeView === "transfers" && (
-            <TransfersView transfers={transfers} sites={sites} />
+            <TransfersView transfers={transfers} />
           )}
-          {activeView === "settings" && (
+          {activeView === "users" && (
             <SettingsView
               users={users}
               onAddUser={handleAddUser}
@@ -461,22 +437,6 @@ export default function Home() {
               onDeleteUser={handleDeleteUser}
               onToggleUser={handleToggleUser}
             />
-          )}
-          {activeView === "sites-settings" && (
-            <div className="p-4 sm:p-6 space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">إدارة المواقع</h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  إضافة وتعديل وحذف المواقع
-                </p>
-              </div>
-              <SitesSettings
-                sites={sites}
-                onAdd={handleAddSite}
-                onEdit={handleEditSite}
-                onDelete={handleDeleteSite}
-              />
-            </div>
           )}
           {activeView === "categories-settings" && (
             <div className="p-4 sm:p-6 space-y-6">
