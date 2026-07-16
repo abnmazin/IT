@@ -1,0 +1,149 @@
+# CHANGELOG.md
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [2026-07-16] — Mobile Responsive Overhaul
+
+### Fixed
+- **Header.tsx** — Search input no longer disappears on mobile (< 640px); full-screen search overlay on mobile; hamburger/site/bell buttons all 44px touch targets; site dropdown `w-56 sm:w-64`; header height `h-14 sm:h-16`
+- **Sidebar.tsx** — Nav buttons `h-11` (44px) instead of `py-2.5` (~40px); added close (X) button inside mobile sidebar
+- **SettingsView.tsx** — Tab labels always visible (removed `hidden sm:inline`); tabs `h-11` (44px)
+- **LocationDetailView.tsx** — +/- buttons `w-11 h-11` (44px); action buttons `h-11`; filter tabs `h-10`; return button `h-11`; page padding `p-3 sm:p-6`; metadata row `flex-wrap`; title `text-xl sm:text-2xl`; truncation on name/label/site
+- **LocationCard.tsx** — Added `truncate` to location name, label, site name; `min-w-0 flex-1` on text container
+- **InventoryView.tsx** — Table cell padding `px-3 sm:px-5`; added `truncate` on item name and serial number
+- **TransfersView.tsx** — Page padding `p-3 sm:p-6`; card padding `p-3 sm:p-5`; `flex-wrap` on header and direction rows; `truncate` on site names
+- **DashboardView.tsx** — Page padding `p-3 sm:p-6`; panel padding `p-3 sm:p-4`; `flex-wrap` on header and item rows; `truncate` on item name and user name
+- **ActivityLogView.tsx** — Log entry padding `px-3 sm:px-5`; filter buttons `h-9`; search input `h-10`; `truncate` on description/details/user name
+- **UsersSettings.tsx** — Table cells `px-3 sm:px-5`; all buttons (edit/delete/close) 40-44px touch targets; submit/cancel `h-11`; role buttons `h-11`
+- **SitesSettings.tsx** — Header `flex-wrap`; add/edit/delete buttons 44px; card padding `p-3`; truncation on site name
+- **CategoriesSettings.tsx** — Header `flex-wrap`; all buttons 44px; serial toggle `w-12 h-12` (48px)
+- **AddItemModal.tsx** — Header `px-4 sm:px-6`; body `p-4 sm:p-6`; close 44px; submit/cancel `h-11`
+- **AddLocationModal.tsx** — Header `px-4 sm:px-6`; body `p-4 sm:p-6`; close 44px; type buttons `h-11`; submit/cancel `h-11`
+- **TransferModal.tsx** — `max-w-md sm:max-w-lg`; header `px-4 sm:px-6`; body `p-4 sm:p-6`; close 44px; submit/cancel `h-11`
+
+### Build
+- Build passes: 18.4 kB page / 106 kB first load
+
+---
+
+## [2026-07-16] — Categories Management & Empty Fields
+
+### Added
+- `Category` type with `id, key, label, serialTracked` fields
+- `defaultCategories` — 10 seed categories with Arabic labels and serial tracking flags
+- `CategoriesSettings` — Full CRUD table for managing categories (key, name, serial tracked toggle)
+- الفئات tab in SettingsView (Tag icon) with add/edit/delete
+- Category activity types: `add_category`, `edit_category`, `delete_category`
+- Dynamic categories passed through LocationsView → LocationDetailView → AddItemModal
+
+### Changed
+- `AddItemModal` — Uses dynamic categories from props instead of hardcoded list; removed `*` required markers; removed name submit validation (all fields optional)
+- `LocationDetailView` — Passes `categories` to AddItemModal
+- `LocationsView` — Accepts and passes `categories` prop
+- `ActivityLogView` — Added `Tag` icon import, `add_category`/`edit_category`/`delete_category` icons and colors
+- `types/index.ts` — Added `Category` interface, `defaultCategories`, 3 category activity types
+
+### Build
+- Build passes: 18 kB page / 105 kB first load
+
+---
+
+## [2026-07-16] — Settings & Activity Log
+
+### Added
+- `SettingsView` — Tabbed settings container with 3 tabs: المستخدمين / المواقع / سجل النشاطات
+- `UsersSettings` — Full CRUD user management table with add/edit modal, role selection, active/inactive toggle
+- `SitesSettings` — Site CRUD grid with add/edit modal and stats per site
+- `ActivityLogView` — Searchable/filterable activity log sorted by newest first, with type badge and user avatar
+- `User` type with `id, name, email, role (admin|technician|viewer), active`
+- `ActivityLogEntry` type with `id, type, description, userId, userName, timestamp, details`
+- `ACTIVITY_TYPE_LABELS` — Arabic labels for 11 activity types (checkout, return, transfer, add/edit/delete for items, locations, sites, users)
+- Activity logging on all mutations: checkout, return, transfer, add item/location/site/user, edit/delete user/site
+- `currentUser` prop in Header — displays logged-in user name next to avatar (resolved `User` name conflict with lucide-react icon by aliasing import to `UserIcon`)
+- `initialUsers` — 4 seed users (أحمد محمد admin, سارة العلي technician, خالد الشمري technician, نورة الحربي viewer)
+- `initialActivityLog` — 6 historical activity entries with realistic timestamps
+- الإعدادات nav item in Sidebar (bottom-aligned with Shield icon)
+- Settings view routing in page.tsx and view type union
+- Auto-assign current user as recipient on checkout (no manual name prompt)
+- `currentUser` prop threaded through LocationsView → LocationDetailView
+
+### Changed
+- `page.tsx` — Added `users`, `currentUser`, `activityLog` state; `logActivity()` wrapper for all mutations; settings view handling; passes `currentUser` to LocationsView
+- `Sidebar.tsx` — Added الإعدادات nav item at bottom with top border separator
+- `Header.tsx` — Added `currentUser` prop, displays user name text alongside avatar icon
+- `LocationDetailView.tsx` — Removed `prompt()` for recipient name (uses `currentUser.name`); moved checked-out items panel (amber return banner) from above items table to below it
+- `LocationsView.tsx` — Added `currentUser` prop, passes through to LocationDetailView
+
+### Build
+- Build passes: 17.1 kB page / 104 kB first load
+
+---
+
+## [2026-07-16]
+
+### Added
+- `docs/PROJECT_INFO.md` — Core project knowledge base (overview, tech stack, requirements, UX principles)
+- `docs/ARCHITECTURE.md` — System architecture map (folder structure, component tree, data flow, RTL strategy)
+- `docs/CHANGELOG.md` — This modification ledger (Keep-a-Changelog format)
+- `"relocating"` status filter button in Box Management view
+- Mobile hamburger menu button in Header (visible below `lg` breakpoint)
+- Mobile sidebar overlay with backdrop blur and click-to-close
+- `scrollbar-none` utility class in globals.css
+- Cairo Arabic font loaded via `next/font/google` with `arabic` + `latin` subsets
+- `onMenuToggle` callback prop in Header component
+
+### Fixed
+- **Sidebar collapse desync:** Removed duplicate `collapsed` state from Sidebar; lifted ownership to `page.tsx`. Sidebar now receives `collapsed`/`onToggle` as props. Main content margin (`mr-[68px] lg:mr-60`) reacts to parent state.
+- **Missing relocating filter:** Added `"relocating"` to `StatusFilter` union type and filter button array in BoxManagementView.
+- **RelocationsView static data:** Now receives live `boxes` prop from page.tsx (was receiving hardcoded reference).
+- **BoxDetailView missing relocating status:** Status badge now uses lookup maps (`statusLabels`, `statusColors`) covering all four status values including `relocating`.
+
+### Changed
+- **Arabic RTL conversion (all files):** `<html dir="rtl" lang="ar">` on root layout. All directional Tailwind classes flipped: `left`↔`right`, `pl`↔`pr`, `ml`↔`mr`, `text-left`↔`text-right`. Sidebar fixed to right side (`right-0`). Bell notification dot moved to `left-1.5`.
+- **All UI text → Arabic:** Dashboard (لوحة التحكم), Boxes (الصناديق), Inventory (المخزون), Relocations (النقل), all stat labels, filter buttons, empty states, action labels, search placeholder.
+- **Mobile responsive layout:** Sidebar hidden below `lg`, toggled via hamburger. Stats grid: 1→2→4 cols. Box grid: 1→2→3→4 cols. Table horizontal scroll on small screens. All padding responsive (`p-4 sm:p-6`).
+- **Sidebar:** Now accepts `mobileOpen`/`onMobileClose` props. Renders backdrop overlay on mobile. Collapse toggle hidden on mobile (`hidden lg:flex`). Transition uses `translate-x` for mobile show/hide.
+- **Header:** Added `onMenuToggle` prop. Hamburger `<Menu>` icon button visible only below `lg`. Search placeholder in Arabic.
+- **BoxCard:** RTL text alignment (`text-right`). Badge positioned on start side (left in RTL). Item count and type count swapped order.
+- **BoxDetailView:** Back button uses `ArrowRight` icon (RTL-appropriate). Status badges use lookup maps. Filter labels in Arabic. Item return banner layout flipped for RTL.
+- **InventoryView:** Table headers `text-right`. Removed unused `@/components/ui-table` import.
+- **RelocationsView:** Route direction flipped (`toSite → fromSite` with `ArrowLeft`). All text in Arabic.
+- **page.tsx:** Added `mobileMenuOpen` state. `onNavigate` closes mobile menu. Sidebar receives all new props.
+- **globals.css:** Added `scrollbar-none` utility class.
+
+## [2026-07-16 — Feature Expansion]
+
+### Added
+- **Site System** — New `Site` type and `initialSites` mock data (4 sites: HQ floors + committee warehouse). Header includes a site selector dropdown that filters all views by the selected site.
+- **Location System** — New `Location` type replacing `Box`. Supports 5 types: box (صندوق), warehouse (مخزن), shelf (رف), room (غرفة), other (أخرى). Each location belongs to a site. 8 mock locations created.
+- **Serial Number Tracking** — `InventoryItem` now has optional `serialNumber` field. `SERIAL_TRACKED_CATEGORIES` constant defines which categories require serial numbers (Laptop, Monitor, Printer, Docking Station). Serial-tracked items use individual +/- (checkout/return) instead of quantity controls. Serial numbers displayed as `IT-LAP-001` style badges in item rows and inventory table.
+- **Transfer System** — New `Transfer` and `TransferItem` types. `TransferModal` component: select destination site + pick items with checkboxes → immediate transfer. `TransfersView` shows transfer history with date, route, and item list. 2 mock transfers included.
+- **Add Location Modal** (`AddLocationModal.tsx`) — Create new storage locations via modal: name, type selector (grid buttons), site dropdown, optional description.
+- **Add Item Modal** (`AddItemModal.tsx`) — Add items to any location: name, category dropdown (Arabic labels), serial number input (shown only for tracked categories), quantity input (for bulk items).
+- **LocationCard** (`LocationCard.tsx`) — New card component with type icon/badge, location name, site, item count, progress bar.
+- **LocationsView** (`LocationsView.tsx`) — Grid of LocationCards with type filters (all/boxes/warehouses/shelves/rooms), "إضافة مكان" button, drills into LocationDetailView.
+- **LocationDetailView** (`LocationDetailView.tsx`) — Full item list with tracked/untracked item controls, serial number badges, "إضافة صنف" button, "نقل إلى موقع آخر" button, quick return banner.
+- **TransferModal** (`TransferModal.tsx`) — Modal with destination site selector, item checklist with serial numbers, select all/none toggle, confirm button with count.
+- `isSerialTracked()` helper function in types.
+- `LOCATION_TYPE_LABELS` Arabic labels for location types.
+- `CATEGORY_AR` Arabic category name mapping in AddItemModal.
+
+### Changed
+- **Data Model (complete rewrite):** `Box` → `Location` (with type field). `Relocation` → `Transfer` (immediate, not in-transit). `InventoryItem` gains `serialNumber`, `locationId`, `checkedOutBy`, `checkedOutDate`. Items tracked individually for serial-tracked categories, by quantity for bulk items.
+- **Mock Data (complete rewrite):** 4 sites, 8 locations (mix of boxes, warehouse, shelf), 35 items with serial numbers on 8 expensive items. Items distributed across sites and locations realistically.
+- **page.tsx (complete rewrite):** State now manages `sites`, `locations`, `items`, `transfers`. `selectedSiteId` state controls site filtering. New handlers: `handleUpdateItemQty`, `handleCheckoutItem`, `handleReturnItem`, `handleAddLocation`, `handleAddItem`, `handleTransferItems`. `filteredLocations` and `filteredItems` computed via `useMemo`.
+- **Header:** Added site selector dropdown with all sites + "جميع المواقع" option. Uses click-outside detection. Shows current site name with MapPin icon.
+- **Sidebar:** Nav items renamed: "الصناديق" → "الأماكن", "النقل" → "عمليات النقل". Icons updated (Package → MapPin for locations).
+- **DashboardView:** Now receives `sites`, `locations`, `items`, `siteName`. Stats: "إجمالي الأماكن", "إجمالي العناصر", "المستلمة", "تنبيهات النقص". Checked-out items list shows serial numbers and `checkedOutBy`. Box health section replaced with location health progress bars.
+- **InventoryView:** New columns: Serial Number (with Tag icon badge), Location, Site. Serial-tracked items show "متوفر"/"مستلم" instead of quantity. Hidden columns on mobile (`hidden sm:table-cell`, `hidden md:table-cell`, `hidden lg:table-cell`).
+- **TransfersView (replaces RelocationsView):** Shows transfer history with from→to site route, date, item count badge, item chips with serial number icons.
+
+### Removed
+- `BoxCard.tsx` — Replaced by `LocationCard.tsx`
+- `BoxManagementView.tsx` — Replaced by `LocationsView.tsx`
+- `BoxDetailView.tsx` — Replaced by `LocationDetailView.tsx`
+- `RelocationsView.tsx` — Replaced by `TransfersView.tsx`
+- `Box` interface — Replaced by `Location`
+- `Relocation` interface — Replaced by `Transfer`
