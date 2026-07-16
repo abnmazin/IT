@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Visit, Box, BoxItem, WarehouseItem, Category, VisitStatus } from "@/types";
-import { ArrowRight, Plus, Package, Tag, MapPin, Play, Square, CheckCircle, RotateCcw, Edit3, Trash2, X } from "lucide-react";
+import { Visit, BoxItem, WarehouseItem, Category, VisitStatus } from "@/types";
+import { ArrowRight, Plus, Package, Tag, Play, Square, CheckCircle, RotateCcw, Trash2, X } from "lucide-react";
 
 interface VisitDetailViewProps {
   visit: Visit;
@@ -16,10 +16,10 @@ interface VisitDetailViewProps {
   onDeleteBox: (visitId: string, boxId: string) => void;
 }
 
-const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  inactive: { label: "غير مفعلة", color: "text-slate-500", bg: "bg-slate-100", icon: Play },
-  active: { label: "مفعلة", color: "text-emerald-600", bg: "bg-emerald-50", icon: Square },
-  completed: { label: "مكتملة", color: "text-sky-600", bg: "bg-sky-50", icon: CheckCircle },
+const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: string }> = {
+  inactive: { label: "غير مفعلة", color: "text-slate-500", bg: "bg-slate-100" },
+  active: { label: "مفعلة", color: "text-emerald-600", bg: "bg-emerald-50" },
+  completed: { label: "مكتملة", color: "text-sky-600", bg: "bg-sky-50" },
 };
 
 export default function VisitDetailView({
@@ -36,7 +36,7 @@ export default function VisitDetailView({
   const [showAddBox, setShowAddBox] = useState(false);
   const [boxName, setBoxName] = useState("");
   const [boxLabel, setBoxLabel] = useState("");
-  const [selectedBox, setSelectedBox] = useState<string | null>(null);
+  const [expandedBox, setExpandedBox] = useState<string | null>(null);
   const [showFill, setShowFill] = useState(false);
   const [showReturn, setShowReturn] = useState(false);
   const [fillItems, setFillItems] = useState<{ warehouseItemId: string; qty: number }[]>([]);
@@ -44,7 +44,7 @@ export default function VisitDetailView({
 
   const cfg = STATUS_CONFIG[visit.status];
   const isActive = visit.status === "active";
-  const selectedBoxData = visit.boxes.find((b) => b.id === selectedBox);
+  const expandedBoxData = visit.boxes.find((b) => b.id === expandedBox);
 
   const totalItems = visit.boxes.reduce(
     (a, b) => a + b.items.reduce((c, i) => c + i.qty, 0),
@@ -60,22 +60,24 @@ export default function VisitDetailView({
   };
 
   const openFill = (boxId: string) => {
-    setSelectedBox(boxId);
+    setExpandedBox(boxId);
     setFillItems([]);
     setShowFill(true);
+    setShowReturn(false);
   };
 
   const openReturn = (boxId: string) => {
-    setSelectedBox(boxId);
+    setExpandedBox(boxId);
     const box = visit.boxes.find((b) => b.id === boxId);
     if (box) {
       setReturnItems(box.items.map((i) => ({ warehouseItemId: i.warehouseItemId, qty: 0 })));
     }
     setShowReturn(true);
+    setShowFill(false);
   };
 
   const handleFill = () => {
-    if (!selectedBox) return;
+    if (!expandedBox) return;
     const items: BoxItem[] = fillItems
       .filter((fi) => fi.qty > 0)
       .map((fi) => {
@@ -89,20 +91,18 @@ export default function VisitDetailView({
         };
       });
     if (items.length > 0) {
-      onFillBox(visit.id, selectedBox, items);
+      onFillBox(visit.id, expandedBox, items);
     }
     setShowFill(false);
-    setSelectedBox(null);
   };
 
   const handleReturn = () => {
-    if (!selectedBox) return;
+    if (!expandedBox) return;
     const returned = returnItems.filter((ri) => ri.qty > 0);
     if (returned.length > 0) {
-      onReturnItems(visit.id, selectedBox, returned);
+      onReturnItems(visit.id, expandedBox, returned);
     }
     setShowReturn(false);
-    setSelectedBox(null);
   };
 
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
@@ -194,13 +194,13 @@ export default function VisitDetailView({
         </div>
       )}
 
-      {showFill && selectedBoxData && (
+      {showFill && expandedBoxData && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">
-              تعبئة {selectedBoxData.name} من المخزن
+              تعبئة {expandedBoxData.name} من المخزن
             </h3>
-            <button onClick={() => { setShowFill(false); setSelectedBox(null); }} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <button onClick={() => { setShowFill(false); }} className="p-1.5 rounded-lg hover:bg-slate-100">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -266,25 +266,25 @@ export default function VisitDetailView({
             <button onClick={handleFill} className="px-4 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700">
               تعبئة الصندوق
             </button>
-            <button onClick={() => { setShowFill(false); setSelectedBox(null); }} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
+            <button onClick={() => { setShowFill(false); }} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
               إلغاء
             </button>
           </div>
         </div>
       )}
 
-      {showReturn && selectedBoxData && (
+      {showReturn && expandedBoxData && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">
-              إرجاع مواد من {selectedBoxData.name} للمخزن
+              إرجاع مواد من {expandedBoxData.name} للمخزن
             </h3>
-            <button onClick={() => { setShowReturn(false); setSelectedBox(null); }} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <button onClick={() => { setShowReturn(false); }} className="p-1.5 rounded-lg hover:bg-slate-100">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
           <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {selectedBoxData.items.map((boxItem) => {
+            {expandedBoxData.items.map((boxItem) => {
               const ri = returnItems.find((r) => r.warehouseItemId === boxItem.warehouseItemId);
               const returnQty = ri?.qty || 0;
               return (
@@ -341,91 +341,87 @@ export default function VisitDetailView({
             <button onClick={handleReturn} className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
               إرجاع للمخزن
             </button>
-            <button onClick={() => { setShowReturn(false); setSelectedBox(null); }} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
+            <button onClick={() => { setShowReturn(false); }} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
               إلغاء
             </button>
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
         {visit.boxes.map((box) => {
           const boxTotal = box.items.reduce((a, i) => a + i.qty, 0);
+          const isExpanded = expandedBox === box.id && !showFill && !showReturn;
           return (
-            <div key={box.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-slate-500" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">{box.name}</p>
-                    {box.label && <p className="text-xs text-slate-400 truncate">{box.label}</p>}
-                    <p className="text-xs text-slate-500 mt-0.5">{boxTotal} قطعة · {box.items.length} صنف</p>
+            <div key={box.id}>
+              <div
+                onClick={() => setExpandedBox(isExpanded ? null : box.id)}
+                className={`bg-slate-50 border rounded-xl p-2.5 sm:p-4 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm cursor-pointer ${
+                  isExpanded ? "border-sky-300 bg-sky-50" : "border-transparent"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-[10px] sm:text-xs font-medium text-slate-500 truncate">
+                    {box.label || "صندوق"}
+                  </span>
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/60 flex items-center justify-center shrink-0">
+                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {isActive && (
-                    <>
-                      <button
-                        onClick={() => openFill(box.id)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-sky-50 text-sky-600 rounded-lg text-xs font-medium hover:bg-sky-100 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        تعبئة
-                      </button>
-                      <button
-                        onClick={() => openReturn(box.id)}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        إرجاع
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => onDeleteBox(visit.id, box.id)}
-                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <p className="text-xs sm:text-sm font-semibold text-slate-900 truncate mb-1">
+                  {box.name}
+                </p>
+                <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-600">
+                  <span>{boxTotal} قطعة</span>
+                  <span>·</span>
+                  <span>{box.items.length} صنف</span>
                 </div>
+                {isActive && (
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openFill(box.id); }}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-sky-100 text-sky-600 rounded-lg text-[11px] font-medium hover:bg-sky-200 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      تعبئة
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openReturn(box.id); }}
+                      className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-emerald-100 text-emerald-600 rounded-lg text-[11px] font-medium hover:bg-emerald-200 transition-colors"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      إرجاع
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {box.items.length > 0 && (
-                <div className="px-4 pb-4">
-                  <div className="space-y-1.5">
-                    {box.items.map((item) => (
-                      <div
-                        key={item.warehouseItemId}
-                        className="flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-slate-50"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="text-xs sm:text-sm text-slate-700 truncate">{item.name}</span>
-                          {item.serialNumber && (
-                            <Tag className="w-3 h-3 text-sky-500 shrink-0" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-medium bg-slate-200 px-2 py-0.5 rounded">
-                            {item.qty}
-                          </span>
-                          <span className="text-[11px] text-slate-400">
-                            {catLabel(item.category)}
-                          </span>
-                        </div>
+              {isExpanded && box.items.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {box.items.map((item) => (
+                    <div
+                      key={item.warehouseItemId}
+                      className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg bg-white border border-slate-100 text-[11px] sm:text-xs"
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Package className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="text-slate-700 truncate">{item.name}</span>
+                        {item.serialNumber && <Tag className="w-2.5 h-2.5 text-sky-500 shrink-0" />}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {box.items.length === 0 && (
-                <div className="px-4 pb-4">
-                  <p className="text-xs text-slate-400 text-center py-4">
-                    الصندوق فارغ — اضغط &quot;تعبئة&quot; لإضافة عناصر من المخزن
-                  </p>
+                      <span className="font-medium bg-slate-200 px-1.5 py-0.5 rounded shrink-0">
+                        {item.qty}
+                      </span>
+                    </div>
+                  ))}
+                  {isActive && (
+                    <button
+                      onClick={() => onDeleteBox(visit.id, box.id)}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 text-[11px] text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      حذف الصندوق
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -433,7 +429,7 @@ export default function VisitDetailView({
         })}
 
         {visit.boxes.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <div className="col-span-full bg-white rounded-xl border border-slate-200 p-12 text-center">
             <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm text-slate-400">لا توجد صناديق بعد — أضف صندوقاً للبدء</p>
           </div>
