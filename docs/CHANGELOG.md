@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Inventory Mobile Cards + Desktop Table
+
+### Changed
+- InventoryView completely redesigned for mobile: card-based layout on `< sm`, table on `sm+`
+- Mobile cards: compact white cards with item name, category/location/site tags, serial number badge, quantity, status badge
+- Desktop: table with responsive hidden columns (serial hidden < md, location/site hidden < lg)
+- All text truncated, no overflow on any screen size
+
+---
+
 ## [2026-07-16] — Dashboard Stat Widgets (Box-style)
 
 ### Changed
