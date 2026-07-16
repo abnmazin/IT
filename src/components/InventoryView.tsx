@@ -10,7 +10,6 @@ import {
   Tag,
   MapPin,
   MinusCircle,
-  Hash,
 } from "lucide-react";
 
 interface InventoryViewProps {
@@ -183,53 +182,50 @@ export default function InventoryView({
 
               {isOpen && (
                 <div className="px-3 pb-3 sm:px-4 sm:pb-4 border-t border-slate-100">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 pt-3">
+                  <div className="space-y-1.5 pt-3">
                     {items.map((item) => {
                       const isExpanded = expandedItem === item.name;
                       return (
-                        <div key={item.name} className={isExpanded ? "col-span-full sm:col-span-full lg:col-span-full" : ""}>
+                        <div key={item.name}>
                           <button
                             onClick={() => toggleItem(item.name)}
-                            className={`w-full text-right bg-slate-50 rounded-xl p-2.5 sm:p-3.5 border transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm ${
+                            className={`w-full flex items-center justify-between gap-3 py-2.5 px-3 sm:px-4 rounded-lg border transition-all text-right ${
                               isExpanded
                                 ? "border-sky-300 bg-sky-50"
-                                : "border-transparent"
+                                : "border-transparent bg-slate-50 hover:bg-slate-100"
                             }`}
                           >
-                            <div className="flex items-start justify-between mb-1.5">
-                              <span className="text-xs sm:text-sm font-medium text-slate-800 truncate">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Package className="w-4 h-4 text-slate-400 shrink-0" />
+                              <span className="text-sm font-medium text-slate-800 truncate">
                                 {item.name}
                               </span>
-                              <div className="flex items-center gap-1 shrink-0 mr-2">
-                                {item.serialNumber && (
-                                  <Tag className="w-3 h-3 text-sky-500" />
-                                )}
-                                {isExpanded ? (
-                                  <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                                ) : (
-                                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                                )}
-                              </div>
+                              {item.serialNumber && (
+                                <Tag className="w-3 h-3 text-sky-500 shrink-0" />
+                              )}
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500">
-                              <span className="flex items-center gap-1">
-                                <Hash className="w-3 h-3" />
+                            <div className="flex items-center gap-3 shrink-0 text-xs">
+                              <span className="text-slate-700 font-medium">
                                 {item.totalQty}
                               </span>
                               {item.totalCheckedOut > 0 && (
-                                <span className="flex items-center gap-1 text-amber-600">
-                                  <MinusCircle className="w-3 h-3" />
-                                  {item.totalCheckedOut}
+                                <span className="text-amber-600">
+                                  {item.totalCheckedOut} مستلم
                                 </span>
                               )}
                               <span className="text-slate-400">
-                                ({item.locations.length} مكان)
+                                {item.locations.length} مكان
                               </span>
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                              )}
                             </div>
                           </button>
 
                           {isExpanded && (
-                            <div className="mt-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
+                            <div className="mt-1.5 mb-1 bg-white rounded-xl border border-slate-200 overflow-hidden">
                               <div className="p-3 sm:p-4">
                                 <div className="flex flex-wrap items-center gap-3 mb-3">
                                   <h4 className="text-sm font-semibold text-slate-900">

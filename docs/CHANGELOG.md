@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Inventory List Layout (Rows instead of Grid)
+
+### Changed
+- Items within each category changed from grid cards to vertical list rows
+- Each row: icon + item name (right) + total qty + checked-out count + locations count + chevron (left)
+- Cleaner, easier-to-read layout on all screen sizes
+- Expanded detail panel remains the same (per-location breakdown)
+
+---
+
 ## [2026-07-16] — Inventory 3-Level Hierarchy (Categories → Items → Detail)
 
 ### Added
