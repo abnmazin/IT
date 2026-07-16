@@ -456,6 +456,7 @@ export default function Home() {
               onAddItem={handleAddWarehouseItem}
               onEditItem={handleEditWarehouseItem}
               onDeleteItem={handleDeleteWarehouseItem}
+              onAddCategory={handleAddCategory}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (

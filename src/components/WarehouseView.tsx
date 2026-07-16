@@ -11,6 +11,7 @@ interface WarehouseViewProps {
   onAddItem: (name: string, category: string, serialNumber: string, totalQty: number) => void;
   onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number) => void;
   onDeleteItem: (id: string) => void;
+  onAddCategory: (key: string, label: string, serialTracked: boolean) => void;
 }
 
 export default function WarehouseView({
@@ -20,13 +21,17 @@ export default function WarehouseView({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onAddCategory,
 }: WarehouseViewProps) {
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [editingItem, setEditingItem] = useState<WarehouseItem | null>(null);
   const [formName, setFormName] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formSerial, setFormSerial] = useState("");
   const [formQty, setFormQty] = useState(1);
+  const [catLabel2, setCatLabel2] = useState("");
+  const [catSerialTracked, setCatSerialTracked] = useState(false);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return items;
@@ -83,6 +88,15 @@ export default function WarehouseView({
     resetForm();
   };
 
+  const handleAddCat = () => {
+    if (!catLabel2.trim()) return;
+    const key = catLabel2.trim().replace(/\s+/g, "_").toLowerCase();
+    onAddCategory(key, catLabel2.trim(), catSerialTracked);
+    setCatLabel2("");
+    setCatSerialTracked(false);
+    setShowAddCategory(false);
+  };
+
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
 
   return (
@@ -94,14 +108,61 @@ export default function WarehouseView({
             إدارة المواد والقطع — الإجمالي: {items.length} صنف
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-medium hover:bg-sky-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>إضافة صنف</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setShowAddCategory(!showAddCategory); setShowAdd(false); }}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              showAddCategory ? "bg-violet-100 text-violet-700" : "bg-violet-50 text-violet-600 hover:bg-violet-100"
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة فئة</span>
+          </button>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-medium hover:bg-sky-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>إضافة صنف</span>
+          </button>
+        </div>
       </div>
+
+      {showAddCategory && (
+        <div className="bg-white rounded-xl border border-violet-200 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">إضافة فئة جديدة</h3>
+            <button onClick={() => setShowAddCategory(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+              <X className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="اسم الفئة (مثال: كابلات، شاشات...)"
+              value={catLabel2}
+              onChange={(e) => setCatLabel2(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCat()}
+              className="flex-1 px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <label className="flex items-center gap-2 text-sm text-slate-600 shrink-0 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={catSerialTracked}
+                onChange={(e) => setCatSerialTracked(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              يتطلب سيريال
+            </label>
+            <button
+              onClick={handleAddCat}
+              className="px-4 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors shrink-0"
+            >
+              إضافة
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAdd && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
