@@ -28,6 +28,7 @@ import DashboardView from "@/components/DashboardView";
 import WarehouseView from "@/components/WarehouseView";
 import VisitsView from "@/components/VisitsView";
 import VisitDetailView from "@/components/VisitDetailView";
+import BoxDetailView from "@/components/BoxDetailView";
 import TransfersView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
@@ -47,6 +48,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
+  const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
 
   const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>(initialWarehouseItems);
   const [visits, setVisits] = useState<Visit[]>(initialVisits);
@@ -76,6 +78,11 @@ export default function Home() {
   const selectedVisit = useMemo(
     () => visits.find((v) => v.id === selectedVisitId) || null,
     [visits, selectedVisitId]
+  );
+
+  const selectedBox = useMemo(
+    () => selectedVisit?.boxes.find((b) => b.id === selectedBoxId) || null,
+    [selectedVisit, selectedBoxId]
   );
 
   const filteredWarehouseItems = useMemo(() => {
@@ -352,10 +359,56 @@ export default function Home() {
     [categories, logActivity]
   );
 
+  const handleUpdateBoxItemQty = useCallback(
+    (visitId: string, boxId: string, warehouseItemId: string, delta: number) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            boxes: v.boxes.map((b) => {
+              if (b.id !== boxId) return b;
+              return {
+                ...b,
+                items: b.items
+                  .map((bi) => {
+                    if (bi.warehouseItemId !== warehouseItemId) return bi;
+                    const newQty = bi.qty + delta;
+                    return newQty > 0 ? { ...bi, qty: newQty } : bi;
+                  })
+                  .filter((bi) => bi.qty > 0),
+              };
+            }),
+          };
+        })
+      );
+    },
+    []
+  );
+
+  const handleDeleteBoxItem = useCallback(
+    (visitId: string, boxId: string, warehouseItemId: string) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            boxes: v.boxes.map((b) => {
+              if (b.id !== boxId) return b;
+              return { ...b, items: b.items.filter((bi) => bi.warehouseItemId !== warehouseItemId) };
+            }),
+          };
+        })
+      );
+    },
+    []
+  );
+
   const handleNavigate = useCallback(
     (view: View) => {
       setActiveView(view);
       setSelectedVisitId(null);
+      setSelectedBoxId(null);
       setMobileMenuOpen(false);
     },
     []
@@ -413,17 +466,33 @@ export default function Home() {
               onToggleVisit={handleToggleVisit}
             />
           )}
-          {activeView === "visits" && selectedVisit && (
+          {activeView === "visits" && selectedVisit && !selectedBoxId && (
             <VisitDetailView
               visit={selectedVisit}
               warehouseItems={warehouseItems}
               categories={categories}
               onBack={() => setSelectedVisitId(null)}
+              onSelectBox={setSelectedBoxId}
               onToggleVisit={handleToggleVisit}
               onFillBox={handleFillBox}
               onReturnItems={handleReturnItems}
               onAddBox={handleAddBox}
               onDeleteBox={handleDeleteBox}
+            />
+          )}
+          {activeView === "visits" && selectedVisit && selectedBoxId && selectedBox && (
+            <BoxDetailView
+              box={selectedBox}
+              visitId={selectedVisit.id}
+              visitName={selectedVisit.name}
+              isActive={selectedVisit.status === "active"}
+              warehouseItems={warehouseItems}
+              categories={categories}
+              onBack={() => setSelectedBoxId(null)}
+              onFillBox={handleFillBox}
+              onReturnItems={handleReturnItems}
+              onUpdateItemQty={handleUpdateBoxItemQty}
+              onDeleteItem={handleDeleteBoxItem}
             />
           )}
           {activeView === "transfers" && (
