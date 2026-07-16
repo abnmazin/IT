@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Inventory 3-Level Hierarchy (Categories → Items → Detail)
+
+### Added
+- Categories accordion sections: each category collapsible with icon, item count, total pieces
+- Item cards within categories: grid of cards showing item name, total qty, checked-out count, number of locations
+- Item detail expansion: click item card → inline panel showing per-location breakdown (location name, site, available qty, checked-out qty + person)
+- `categories` prop added to InventoryView
+
+### Changed
+- InventoryView completely rewritten from table to 3-level hierarchy
+- All categories open by default, toggle on click
+- Only categories with items are shown
+- Search filters across name, category, serial number
+- Mobile: `grid-cols-2`, compact cards, full-width detail panels
+- Item detail panel uses `col-span-full` on all breakpoints when expanded
+
+### Build
+- Build passes: 19.6 kB page / 107 kB first load
+
+---
+
 ## [2026-07-16] — Inventory Mobile Cards + Desktop Table
 
 ### Changed

@@ -443,6 +443,7 @@ export default function Home() {
               sites={sites}
               locations={locations}
               items={filteredItems}
+              categories={categories}
               searchQuery={searchQuery}
             />
           )}
