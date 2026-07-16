@@ -98,7 +98,10 @@ export type View =
   | "locations"
   | "inventory"
   | "transfers"
-  | "settings";
+  | "settings"
+  | "sites-settings"
+  | "categories-settings"
+  | "activity-log";
 
 export type UserRole = "admin" | "technician" | "viewer";
 

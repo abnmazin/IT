@@ -30,6 +30,9 @@ import LocationsView from "@/components/LocationsView";
 import InventoryView from "@/components/InventoryView";
 import TransfersView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
+import SitesSettings from "@/components/SitesSettings";
+import CategoriesSettings from "@/components/CategoriesSettings";
+import ActivityLogView from "@/components/ActivityLogView";
 
 function now() {
   return new Date().toISOString();
@@ -453,20 +456,54 @@ export default function Home() {
           {activeView === "settings" && (
             <SettingsView
               users={users}
-              sites={sites}
-              categories={categories}
-              activityLog={activityLog}
               onAddUser={handleAddUser}
               onEditUser={handleEditUser}
               onDeleteUser={handleDeleteUser}
               onToggleUser={handleToggleUser}
-              onAddSite={handleAddSite}
-              onEditSite={handleEditSite}
-              onDeleteSite={handleDeleteSite}
-              onAddCategory={handleAddCategory}
-              onEditCategory={handleEditCategory}
-              onDeleteCategory={handleDeleteCategory}
             />
+          )}
+          {activeView === "sites-settings" && (
+            <div className="p-4 sm:p-6 space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">إدارة المواقع</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  إضافة وتعديل وحذف المواقع
+                </p>
+              </div>
+              <SitesSettings
+                sites={sites}
+                onAdd={handleAddSite}
+                onEdit={handleEditSite}
+                onDelete={handleDeleteSite}
+              />
+            </div>
+          )}
+          {activeView === "categories-settings" && (
+            <div className="p-4 sm:p-6 space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">إدارة الفئات</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  إضافة وتعديل وحذف فئات العناصر
+                </p>
+              </div>
+              <CategoriesSettings
+                categories={categories}
+                onAdd={handleAddCategory}
+                onEdit={handleEditCategory}
+                onDelete={handleDeleteCategory}
+              />
+            </div>
+          )}
+          {activeView === "activity-log" && (
+            <div className="p-4 sm:p-6 space-y-6">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">سجل النشاط</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  جميع العمليات والتعديلات
+                </p>
+              </div>
+              <ActivityLogView activityLog={activityLog} />
+            </div>
           )}
         </main>
       </div>

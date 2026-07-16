@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Settings Split into Sidebar Navigation
+
+### Changed
+- Sites, Categories, Activity Log moved from SettingsView tabs to separate Sidebar nav items
+- Sidebar bottom section: المستخدمين (Users), المواقع (Sites), الفئات (Categories), سجل النشاط (Activity Log)
+- SettingsView simplified to only UsersSettings (removed tabs, sites, categories, activity props)
+- Added 3 new View types: `sites-settings`, `categories-settings`, `activity-log`
+- Each new view has its own page header + standalone component in page.tsx
+
+---
+
 ## [2026-07-16] — Inventory List Layout (Rows instead of Grid)
 
 ### Changed

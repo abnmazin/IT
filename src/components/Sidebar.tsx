@@ -7,6 +7,9 @@ import {
   Boxes,
   Truck,
   Settings,
+  Globe,
+  Tag,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   X,
@@ -20,7 +23,10 @@ const navItems: { id: View; label: string; icon: React.ElementType }[] = [
 ];
 
 const bottomItems: { id: View; label: string; icon: React.ElementType }[] = [
-  { id: "settings", label: "الإعدادات", icon: Settings },
+  { id: "settings", label: "المستخدمين", icon: Settings },
+  { id: "sites-settings", label: "المواقع", icon: Globe },
+  { id: "categories-settings", label: "الفئات", icon: Tag },
+  { id: "activity-log", label: "سجل النشاط", icon: ClipboardList },
 ];
 
 interface SidebarProps {
