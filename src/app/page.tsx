@@ -336,6 +336,14 @@ export default function Home() {
     [sites, logActivity]
   );
 
+  const handleTogglePin = useCallback((locationId: string) => {
+    setLocations((prev) =>
+      prev.map((loc) =>
+        loc.id === locationId ? { ...loc, pinned: !loc.pinned } : loc
+      )
+    );
+  }, []);
+
   const handleAddCategory = useCallback(
     (key: string, label: string, serialTracked: boolean) => {
       const newCat: Category = {
@@ -427,6 +435,7 @@ export default function Home() {
               onAddLocation={handleAddLocation}
               onAddItem={handleAddItem}
               onTransferItems={handleTransferItems}
+              onTogglePin={handleTogglePin}
             />
           )}
           {activeView === "inventory" && (

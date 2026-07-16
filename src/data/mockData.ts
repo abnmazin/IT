@@ -8,17 +8,17 @@ import {
 } from "@/types";
 
 export const initialSites: Site[] = [
-  { id: "site-1", name: "HQ - الطابق 1" },
-  { id: "site-2", name: "HQ - الطابق 2" },
-  { id: "site-3", name: "HQ - الطابق 3" },
-  { id: "site-4", name: "مخزن اللجنة" },
+  { id: "site-1", name: "مقر اللجنة" },
+  { id: "site-2", name: "موكب كربلاء" },
+  { id: "site-3", name: "موكب النجف" },
+  { id: "site-4", name: "موكب سامرا" },
 ];
 
 export const initialLocations: Location[] = [
-  { id: "loc-1", name: "صندوق #1", type: "box", siteId: "site-3", label: "مجموعات اللابتوب" },
+  { id: "loc-1", name: "صندوق #1", type: "box", siteId: "site-3", label: "مجموعات اللابتوب", pinned: true },
   { id: "loc-2", name: "صندوق #2", type: "box", siteId: "site-3", label: "شاشات العرض" },
   { id: "loc-3", name: "صندوق #3", type: "box", siteId: "site-1", label: "مستلزمات الطابعة" },
-  { id: "loc-4", name: "صندوق #4", type: "box", siteId: "site-2", label: "ملحقات الإدخال" },
+  { id: "loc-4", name: "صندوق #4", type: "box", siteId: "site-2", label: "ملحقات الإدخال", pinned: true },
   { id: "loc-5", name: "مخزن الطابق الأول", type: "warehouse", siteId: "site-1", label: "مخزن رئيسي - كابلات وقطع غيار" },
   { id: "loc-6", name: "صندوق #5", type: "box", siteId: "site-1", label: "طباعة وملصقات" },
   { id: "loc-7", name: "رف المخزون", type: "shelf", siteId: "site-4", label: "قطع غيار وملحقات احتياطية" },

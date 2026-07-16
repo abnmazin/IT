@@ -37,6 +37,7 @@ interface LocationsViewProps {
     toSiteId: string,
     fromLocationId: string
   ) => void;
+  onTogglePin: (locationId: string) => void;
 }
 
 type TypeFilter = "all" | Location["type"];
@@ -55,6 +56,7 @@ export default function LocationsView({
   onAddLocation,
   onAddItem,
   onTransferItems,
+  onTogglePin,
 }: LocationsViewProps) {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -77,7 +79,11 @@ export default function LocationsView({
     if (typeFilter !== "all") {
       result = result.filter((l) => l.type === typeFilter);
     }
-    return result;
+    return [...result].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return 0;
+    });
   }, [locations, items, searchQuery, typeFilter]);
 
   const currentLocationData = selectedLocation
@@ -159,7 +165,7 @@ export default function LocationsView({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
           {filteredLocations.map((loc) => {
             const locItems = items.filter((i) => i.locationId === loc.id);
             const site = sites.find((s) => s.id === loc.siteId);
@@ -170,6 +176,7 @@ export default function LocationsView({
                 items={locItems}
                 siteName={site?.name ?? ""}
                 onClick={() => setSelectedLocation(loc)}
+                onTogglePin={() => onTogglePin(loc.id)}
               />
             );
           })}

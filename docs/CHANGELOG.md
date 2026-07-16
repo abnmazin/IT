@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2026-07-16] — Pin Locations & Compact Mobile Grid
+
+### Added
+- `pinned?: boolean` field on `Location` type
+- Pin/Unpin button on LocationCard (Pin icon, toggles fill)
+- Pinned locations sorted to top of the grid
+- Pin button 44px touch target, shows filled icon when pinned
+
+### Changed
+- Site names updated: مقر اللجنة, موكب كربلاء, موكب النجف, موكب سامرا
+- LocationCard compact design: padding `p-2.5 sm:p-4`, smaller text on mobile, smaller icons
+- Locations grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5` (2 boxes per row on mobile)
+- Grid gap: `gap-2 sm:gap-3` for tighter mobile layout
+- `initialLocations` — 2 locations pre-pinned (loc-1, loc-4)
+
+### Build
+- Build passes: 18.8 kB page / 106 kB first load
+
+---
+
 ## [2026-07-16] — Mobile Responsive Overhaul
 
 ### Fixed

@@ -62,6 +62,7 @@ export interface Location {
   type: LocationType;
   siteId: string;
   label?: string;
+  pinned?: boolean;
 }
 
 export interface InventoryItem {
