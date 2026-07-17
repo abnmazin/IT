@@ -457,12 +457,14 @@ export default function Home() {
         />
 
         <main className="flex-1 overflow-y-auto">
-          {activeView === "dashboard" && (
+           {activeView === "dashboard" && (
             <DashboardView
               totalWarehouseItems={warehouseItems.length}
               totalWarehouseQty={totalWarehouseQty}
               activeVisitCount={activeVisitCount}
               totalBoxItems={totalBoxItems}
+              visits={visits}
+              activityLog={activityLog}
               onNavigateToWarehouse={() => handleNavigate("warehouse")}
               onNavigateToVisits={() => handleNavigate("visits")}
               onNavigateToBoxes={() => handleNavigate("boxes")}

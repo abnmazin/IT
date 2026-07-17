@@ -70,24 +70,22 @@ const TYPE_COLORS: Record<ActivityType, string> = {
   delete_category: "bg-red-50 text-red-600",
 };
 
-type FilterType = "all" | "today" | "checkout" | "return" | "transfer" | "visit" | "add" | "delete";
+type FilterType = "all" | "date" | "checkout" | "return" | "transfer" | "visit" | "add" | "delete";
 
 export default function ActivityLogView({ activityLog, visits }: ActivityLogViewProps) {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("all");
+  const [filterDate, setFilterDate] = useState<string>("");
   const [filterVisitId, setFilterVisitId] = useState<string>("All");
   const [showFilters, setShowFilters] = useState(false);
-
-  const completedVisits = useMemo(() => visits.filter((v) => v.status === "completed"), [visits]);
 
   const filtered = useMemo(() => {
     let result = [...activityLog].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
 
-    if (filterType === "today") {
-      const today = new Date().toISOString().split("T")[0];
-      result = result.filter((e) => e.timestamp.startsWith(today));
+    if (filterType === "date" && filterDate) {
+      result = result.filter((e) => e.timestamp.startsWith(filterDate));
     } else if (filterType === "checkout") {
       result = result.filter((e) => e.type === "checkout");
     } else if (filterType === "return") {
@@ -121,7 +119,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
     }
 
     return result;
-  }, [activityLog, filterType, filterVisitId, search]);
+  }, [activityLog, filterType, filterDate, filterVisitId, search]);
 
   const formatTime = (ts: string) => {
     try {
@@ -143,7 +141,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
 
   const filters: { value: FilterType; label: string; icon: React.ElementType }[] = [
     { value: "all", label: "الكل", icon: Filter },
-    { value: "today", label: "اليوم", icon: Calendar },
+    { value: "date", label: "حسباريخ", icon: Calendar },
     { value: "visit", label: "الزيارات", icon: ClipboardList },
     { value: "checkout", label: "سحب", icon: LogOut },
     { value: "return", label: "إرجاع", icon: LogIn },
@@ -195,7 +193,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
               {filters.map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setFilterType(f.value)}
+                  onClick={() => { setFilterType(f.value); if (f.value === "date" && !filterDate) setFilterDate(new Date().toISOString().split("T")[0]); }}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors min-h-[36px] ${
                     filterType === f.value
                       ? "bg-slate-900 text-white"
@@ -208,16 +206,27 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
               ))}
             </div>
           </div>
-          {completedVisits.length > 0 && (
+          {filterType === "date" && (
             <div>
-              <p className="text-[11px] font-medium text-slate-500 mb-2"> حسب زيارة مكتملة</p>
+              <p className="text-[11px] font-medium text-slate-500 mb-2">اختر تاريخ</p>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
+              />
+            </div>
+          )}
+          {visits.length > 0 && (
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 mb-2"> حسب زيارة</p>
               <select
                 value={filterVisitId}
                 onChange={(e) => setFilterVisitId(e.target.value)}
                 className="w-full h-10 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
               >
                 <option value="All">كل الزيارات</option>
-                {completedVisits.map((v) => (
+                {visits.map((v) => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
