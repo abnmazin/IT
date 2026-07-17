@@ -138,43 +138,77 @@ export default function Home() {
 
   const handleReactivateVisit = useCallback(
     (visitId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
       setVisits((prev) =>
         prev.map((v) => {
           if (v.id !== visitId) return v;
-          const restoredItems: { warehouseItemId: string; qty: number }[] = [];
-          v.boxes.forEach((b) =>
-            b.items.forEach((bi) => {
-              restoredItems.push({ warehouseItemId: bi.warehouseItemId, qty: bi.qty });
-            })
-          );
-          const merged = restoredItems.reduce<{ id: string; qty: number }[]>((acc, r) => {
-            const existing = acc.find((a) => a.id === r.warehouseItemId);
-            if (existing) existing.qty += r.qty;
-            else acc.push({ id: r.warehouseItemId, qty: r.qty });
-            return acc;
-          }, []);
           return {
             ...v,
             status: "inactive" as const,
-            boxes: v.boxes.map((b) => ({ ...b, items: [] })),
+            boxes: v.boxes.map((b) => ({
+              ...b,
+              items: b.items.map((bi) => ({
+                ...bi,
+                qty: 0,
+                returnedQty: undefined,
+                status: undefined,
+              })),
+            })),
           };
         })
       );
       setWarehouseItems((prev) => {
-        const visit = visits.find((v) => v.id === visitId);
-        if (!visit) return prev;
         const restored: Record<string, number> = {};
         visit.boxes.forEach((b) =>
           b.items.forEach((bi) => {
-            restored[bi.warehouseItemId] = (restored[bi.warehouseItemId] || 0) + bi.qty;
+            if (bi.status === "returned" && bi.returnedQty && bi.returnedQty > 0) {
+              restored[bi.warehouseItemId] = (restored[bi.warehouseItemId] || 0) + bi.returnedQty;
+            }
           })
         );
+        if (Object.keys(restored).length === 0) return prev;
         return prev.map((wh) =>
           restored[wh.id] ? { ...wh, totalQty: wh.totalQty + restored[wh.id] } : wh
         );
       });
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "تم إرجاع العناصر المُرجعة للمخزن، القالب جاهز", visitId);
+    },
+    [visits, logActivity]
+  );
+
+  const handleFillBoxesFromTemplate = useCallback(
+    (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
-      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit?.name || ""}`, "تم إرجاع العناصر للمخزن", visitId);
+      if (!visit) return;
+      const needed: Record<string, number> = {};
+      visit.boxes.forEach((b) =>
+        b.items.forEach((bi) => {
+          needed[bi.warehouseItemId] = (needed[bi.warehouseItemId] || 0) + bi.qty;
+        })
+      );
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            boxes: v.boxes.map((b) => ({
+              ...b,
+              items: b.items.map((bi) => ({ ...bi, qty: bi.qty })),
+            })),
+          };
+        })
+      );
+      setWarehouseItems((prev) =>
+        prev.map((wh) => {
+          const req = needed[wh.id];
+          if (req && req > 0) {
+            return { ...wh, totalQty: Math.max(0, wh.totalQty - req) };
+          }
+          return wh;
+        })
+      );
+      logActivity("fill_box", `تعبئة صناديق من القالب: ${visit.name}`, undefined, visitId);
     },
     [visits, logActivity]
   );
@@ -547,10 +581,12 @@ export default function Home() {
            {activeView === "visits" && !selectedVisitId && (
             <VisitsView
               visits={visits}
+              warehouseItems={warehouseItems}
               onSelectVisit={setSelectedVisitId}
               onAddVisit={handleAddVisit}
               onToggleVisit={handleToggleVisit}
               onReactivateVisit={handleReactivateVisit}
+              onFillBoxes={handleFillBoxesFromTemplate}
             />
           )}
            {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (

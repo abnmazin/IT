@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Visit, VisitStatus } from "@/types";
-import { Plus, MapPin, Calendar, X, Play, CheckCircle, Package, RotateCcw } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Visit, VisitStatus, WarehouseItem } from "@/types";
+import {
+  Plus, MapPin, Calendar, X, Play, CheckCircle, Package,
+  RotateCcw, AlertTriangle, ShoppingCart,
+} from "lucide-react";
 
 interface VisitsViewProps {
   visits: Visit[];
+  warehouseItems: WarehouseItem[];
   onSelectVisit: (visitId: string) => void;
   onAddVisit: (name: string, date: string, hijriDate?: string) => void;
   onToggleVisit: (visitId: string) => void;
   onReactivateVisit: (visitId: string) => void;
+  onFillBoxes: (visitId: string) => void;
 }
 
 const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -21,15 +26,18 @@ const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: str
 
 export default function VisitsView({
   visits,
+  warehouseItems,
   onSelectVisit,
   onAddVisit,
   onToggleVisit,
   onReactivateVisit,
+  onFillBoxes,
 }: VisitsViewProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState("");
   const [formHijri, setFormHijri] = useState("");
+  const [shortageVisitId, setShortageVisitId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (!formName.trim() || !formDate) return;
@@ -38,6 +46,34 @@ export default function VisitsView({
     setFormDate("");
     setFormHijri("");
     setShowAdd(false);
+  };
+
+  const getShortageInfo = (visit: Visit) => {
+    const needed: Record<string, number> = {};
+    visit.boxes.forEach((b) =>
+      b.items.forEach((bi) => {
+        needed[bi.warehouseItemId] = (needed[bi.warehouseItemId] || 0) + bi.qty;
+      })
+    );
+    const shortages: { name: string; needed: number; available: number }[] = [];
+    for (const [itemId, reqQty] of Object.entries(needed)) {
+      if (reqQty <= 0) continue;
+      const whItem = warehouseItems.find((w) => w.id === itemId);
+      const avail = whItem?.totalQty || 0;
+      if (avail < reqQty) {
+        shortages.push({ name: whItem?.name || itemId, needed: reqQty, available: avail });
+      }
+    }
+    return shortages;
+  };
+
+  const handleFillClick = (visit: Visit) => {
+    const shortages = getShortageInfo(visit);
+    if (shortages.length > 0) {
+      setShortageVisitId(visit.id);
+    } else {
+      onFillBoxes(visit.id);
+    }
   };
 
   const activeVisits = visits.filter((v) => v.status === "active");
@@ -51,6 +87,14 @@ export default function VisitsView({
       (a, b) => a + b.items.reduce((c, i) => c + i.qty, 0),
       0
     );
+    const templateItems = visit.boxes.reduce(
+      (a, b) => a + b.items.length,
+      0
+    );
+    const hasBoxes = visit.boxes.length > 0;
+    const shortages = visit.status === "inactive" && hasBoxes ? getShortageInfo(visit) : [];
+    const isShortageShowing = shortageVisitId === visit.id;
+
     return (
       <div
         key={visit.id}
@@ -80,8 +124,38 @@ export default function VisitsView({
         <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-600">
           <span>{visit.boxes.length} صناديق</span>
           <span>·</span>
-          <span>{totalItems} قطعة</span>
+          <span>{totalItems > 0 ? `${totalItems} قطعة` : `${templateItems} قالب`}</span>
         </div>
+
+        {/* Shortage warning for inactive visits */}
+        {visit.status === "inactive" && hasBoxes && isShortageShowing && shortages.length > 0 && (
+          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="text-[10px] sm:text-[11px] font-medium text-amber-700">نقص في المخزن</span>
+            </div>
+            {shortages.map((s, i) => (
+              <p key={i} className="text-[10px] text-amber-600 mb-0.5">
+                {s.name}: يحتاج {s.needed} — متوفر {s.available}
+              </p>
+            ))}
+            <div className="flex gap-1.5 mt-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onFillBoxes(visit.id); setShortageVisitId(null); }}
+                className="flex-1 px-2 py-1.5 bg-amber-500 text-white rounded text-[10px] font-medium hover:bg-amber-600 min-h-[32px]"
+              >
+                متابعة بالتناقص
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShortageVisitId(null); }}
+                className="px-2 py-1.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium hover:bg-slate-200 min-h-[32px]"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-2 flex gap-1.5">
           {visit.status === "active" && (
             <button
@@ -101,7 +175,25 @@ export default function VisitsView({
               إنهاء
             </button>
           )}
-          {visit.status === "inactive" && (
+          {visit.status === "inactive" && hasBoxes && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleFillClick(visit); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-violet-50 text-violet-600 rounded-lg text-[11px] font-medium hover:bg-violet-100 transition-colors min-h-[44px] active:scale-95"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                تعبئة
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-emerald-600 text-white rounded-lg text-[11px] font-medium hover:bg-emerald-700 transition-colors min-h-[44px] active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5" />
+                تفعيل
+              </button>
+            </>
+          )}
+          {visit.status === "inactive" && !hasBoxes && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
               className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-emerald-600 text-white rounded-lg text-[11px] font-medium hover:bg-emerald-700 transition-colors min-h-[44px] active:scale-95"
