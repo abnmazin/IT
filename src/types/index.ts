@@ -65,6 +65,7 @@ export interface Visit {
   name: string;
   date: string;
   hijriDate?: string;
+  year?: string;
   status: VisitStatus;
   boxes: Box[];
 }
@@ -202,5 +203,6 @@ export interface ActivityLogEntry {
   userId: string;
   userName: string;
   timestamp: string;
+  visitId?: string;
   details?: string;
 }

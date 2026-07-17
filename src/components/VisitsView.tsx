@@ -41,7 +41,6 @@ export default function VisitsView({
   const activeVisits = visits.filter((v) => v.status === "active");
   const collectingVisits = visits.filter((v) => v.status === "collecting");
   const inactiveVisits = visits.filter((v) => v.status === "inactive");
-  const completedVisits = visits.filter((v) => v.status === "completed");
 
   const renderVisit = (visit: Visit) => {
     const cfg = STATUS_CONFIG[visit.status];
@@ -101,14 +100,6 @@ export default function VisitsView({
             >
               <Play className="w-3.5 h-3.5" />
               تفعيل
-            </button>
-          )}
-          {visit.status === "completed" && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-[11px] font-medium hover:bg-slate-200 transition-colors min-h-[44px] active:scale-95"
-            >
-              إعادة
             </button>
           )}
         </div>
@@ -204,15 +195,6 @@ export default function VisitsView({
           <h2 className="text-sm font-semibold text-slate-500 mb-2">زيارات غير مفعلة</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
             {inactiveVisits.map(renderVisit)}
-          </div>
-        </div>
-      )}
-
-      {completedVisits.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-sky-500 mb-2">زيارات مكتملة</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-            {completedVisits.map(renderVisit)}
           </div>
         </div>
       )}

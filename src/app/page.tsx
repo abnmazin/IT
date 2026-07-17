@@ -62,7 +62,7 @@ export default function Home() {
   const currentUser = useMemo(() => users[0], [users]);
 
   const logActivity = useCallback(
-    (type: ActivityType, description: string, details?: string) => {
+    (type: ActivityType, description: string, details?: string, visitId?: string) => {
       const entry: ActivityLogEntry = {
         id: `act-${Date.now()}`,
         type,
@@ -70,6 +70,7 @@ export default function Home() {
         userId: currentUser.id,
         userName: currentUser.name,
         timestamp: now(),
+        visitId,
         details,
       };
       setActivityLog((prev) => [entry, ...prev]);
@@ -146,7 +147,7 @@ export default function Home() {
         boxes: [],
       };
       setVisits((prev) => [...prev, newVisit]);
-      logActivity("add_visit", `إضافة زيارة جديدة: ${name}`);
+      logActivity("add_visit", `إضافة زيارة جديدة: ${name}`, undefined, newVisit.id);
     },
     [logActivity]
   );
@@ -167,7 +168,9 @@ export default function Home() {
         const nextStatus = visit.status === "inactive" ? "active" : visit.status === "active" ? "collecting" : visit.status === "collecting" ? "completed" : "inactive";
         logActivity(
           nextStatus === "active" ? "activate_visit" : nextStatus === "collecting" ? "collect_visit" : nextStatus === "completed" ? "complete_visit" : "deactivate_visit",
-          `${nextStatus === "active" ? "تفعيل" : nextStatus === "collecting" ? "جمع العناصر" : nextStatus === "completed" ? "إنهاء" : "إلغاء تفعيل"} زيارة: ${visit.name}`
+          `${nextStatus === "active" ? "تفعيل" : nextStatus === "collecting" ? "جمع العناصر" : nextStatus === "completed" ? "إنهاء" : "إلغاء تفعيل"} زيارة: ${visit.name}`,
+          undefined,
+          visitId
         );
       }
     },
@@ -196,7 +199,7 @@ export default function Home() {
         })
       );
       const visit = visits.find((v) => v.id === visitId);
-      logActivity("complete_visit", `إنهاء زيارة: ${visit?.name || ""}`, `تم جمع ${collected.length} صنف`);
+      logActivity("complete_visit", `إنهاء زيارة: ${visit?.name || ""}`, `تم جمع ${collected.length} صنف`, visitId);
     },
     [visits, logActivity]
   );
@@ -230,7 +233,8 @@ export default function Home() {
       logActivity(
         "fill_box",
         `تعبئة ${box?.name || "صندوق"} — ${itemNames}`,
-        visit?.name
+        visit?.name,
+        visitId
       );
     },
     [visits, logActivity]
@@ -274,7 +278,8 @@ export default function Home() {
       logActivity(
         "return_items",
         `إرجاع مواد من صندوق ${boxId} للمخزن`,
-        visit?.name
+        visit?.name,
+        visitId
       );
     },
     [visits, logActivity]
@@ -502,11 +507,12 @@ export default function Home() {
               onToggleVisit={handleToggleVisit}
             />
           )}
-          {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (
+           {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (
             <VisitDetailView
               visit={selectedVisit}
               warehouseItems={warehouseItems}
               categories={categories}
+              activityLog={activityLog}
               onBack={() => setSelectedVisitId(null)}
               onSelectBox={setSelectedBoxId}
               onToggleVisit={handleToggleVisit}
@@ -586,7 +592,7 @@ export default function Home() {
                   جميع العمليات والتعديلات
                 </p>
               </div>
-              <ActivityLogView activityLog={activityLog} />
+               <ActivityLogView activityLog={activityLog} visits={visits} />
             </div>
           )}
         </main>

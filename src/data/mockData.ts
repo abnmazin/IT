@@ -162,10 +162,10 @@ export const initialUsers: User[] = [
 ];
 
 export const initialActivityLog: ActivityLogEntry[] = [
-  { id: "act-1", type: "activate_visit", description: "تفعيل زيارة كربلاء — Arbaeen", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-10T09:00:00" },
-  { id: "act-2", type: "fill_box", description: "تعبئة صندوق المعدات المتنقلة — 4 عناصر", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-10T09:30:00", details: "زيارة كربلاء" },
-  { id: "act-3", type: "fill_box", description: "تعبئة صندوق الإدخال — 4 عناصر", userId: "user-2", userName: "سارة العلي", timestamp: "2026-07-10T10:00:00", details: "زيارة كربلاء" },
-  { id: "act-4", type: "fill_box", description: "تعبئة صندوق الكابلات — 4 عناصر", userId: "user-3", userName: "خالد الشمري", timestamp: "2026-07-10T10:30:00", details: "زيارة كربلاء" },
+  { id: "act-1", type: "activate_visit", description: "تفعيل زيارة كربلاء — Arbaeen", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-10T09:00:00", visitId: "visit-2" },
+  { id: "act-2", type: "fill_box", description: "تعبئة صندوق المعدات المتنقلة — 4 عناصر", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-10T09:30:00", visitId: "visit-2", details: "زيارة كربلاء" },
+  { id: "act-3", type: "fill_box", description: "تعبئة صندوق الإدخال — 4 عناصر", userId: "user-2", userName: "سارة العلي", timestamp: "2026-07-10T10:00:00", visitId: "visit-2", details: "زيارة كربلاء" },
+  { id: "act-4", type: "fill_box", description: "تعبئة صندوق الكابلات — 4 عناصر", userId: "user-3", userName: "خالد الشمري", timestamp: "2026-07-10T10:30:00", visitId: "visit-2", details: "زيارة كربلاء" },
   { id: "act-5", type: "add_visit", description: "إضافة زيارة جديدة: زيارة النجف الأشرف — وفاة الإمام علي", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-08T08:00:00" },
   { id: "act-6", type: "add_user", description: "إضافة مستخدم جديد: نورة الحربي", userId: "user-1", userName: "أحمد محمد", timestamp: "2026-07-05T13:00:00" },
 ];

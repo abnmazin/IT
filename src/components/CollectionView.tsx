@@ -162,49 +162,42 @@ export default function CollectionView({
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <button
           onClick={onBack}
-          className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0"
         >
           <ArrowRight className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">جمع العناصر — {visit.name}</h1>
-            <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md">
-              جمع العناصر
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            حدد عدد المعاد من كل صنف — المواد الاستهلاكية لا تُرجع
-          </p>
+          <h1 className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">جمع العناصر</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 truncate">{visit.name}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2">
         <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
-          <p className="text-xl font-bold text-slate-900">{summary.totalDeployed}</p>
-          <p className="text-[11px] text-slate-500">إجمالي المُرسل</p>
+          <p className="text-lg sm:text-xl font-bold text-slate-900">{summary.totalDeployed}</p>
+          <p className="text-[11px] text-slate-500">المُرسل</p>
         </div>
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 text-center">
-          <p className="text-xl font-bold text-emerald-700">{summary.totalReturned}</p>
-          <p className="text-[11px] text-emerald-600">عاد للمخزن</p>
+          <p className="text-lg sm:text-xl font-bold text-emerald-700">{summary.totalReturned}</p>
+          <p className="text-[11px] text-emerald-600">عاد</p>
         </div>
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-3 text-center">
-          <p className="text-xl font-bold text-amber-700">{summary.totalConsumed}</p>
+          <p className="text-lg sm:text-xl font-bold text-amber-700">{summary.totalConsumed}</p>
           <p className="text-[11px] text-amber-600">استُهلك</p>
         </div>
         <div className="bg-red-50 rounded-xl border border-red-200 p-3 text-center">
-          <p className="text-xl font-bold text-red-700">{summary.totalMissing}</p>
-          <p className="text-[11px] text-red-600">لم يُرجع</p>
+          <p className="text-lg sm:text-xl font-bold text-red-700">{summary.totalMissing}</p>
+          <p className="text-[11px] text-red-600">مفقود</p>
         </div>
       </div>
 
       {missingNonConsumable.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm font-medium text-amber-800">
-            ⚠️ يوجد {missingNonConsumable.length} عناصر غير استهلاكية لم تُرجع بالكامل
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p className="text-xs sm:text-sm font-medium text-amber-800">
+            ⚠️ {missingNonConsumable.length} عناصر غير استهلاكية لم تُرجع بالكامل
           </p>
         </div>
       )}
@@ -212,7 +205,7 @@ export default function CollectionView({
       <div className="flex gap-2">
         <button
           onClick={() => setViewMode("box")}
-          className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+          className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-sm font-medium transition-colors min-h-[44px] ${
             viewMode === "box" ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
@@ -220,7 +213,7 @@ export default function CollectionView({
         </button>
         <button
           onClick={() => setViewMode("category")}
-          className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+          className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-sm font-medium transition-colors min-h-[44px] ${
             viewMode === "category" ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
@@ -238,7 +231,7 @@ export default function CollectionView({
               <div key={boxId} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <button
                   onClick={() => setExpandedBox(isExpanded ? null : boxId)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                  className="w-full flex items-center justify-between px-3 sm:px-4 py-3.5 hover:bg-slate-50 transition-colors min-h-[48px]"
                 >
                   <div className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-slate-400" />
