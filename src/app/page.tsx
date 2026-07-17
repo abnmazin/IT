@@ -47,7 +47,6 @@ export default function Home() {
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedVisitId, setSelectedVisitId] = useState<string | null>(null);
   const [selectedBoxId, setSelectedBoxId] = useState<string | null>(null);
 
@@ -85,23 +84,6 @@ export default function Home() {
     () => selectedVisit?.boxes.find((b) => b.id === selectedBoxId) || null,
     [selectedVisit, selectedBoxId]
   );
-
-  const filteredWarehouseItems = useMemo(() => {
-    if (!searchQuery) return warehouseItems;
-    const q = searchQuery.toLowerCase();
-    return warehouseItems.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        i.category.toLowerCase().includes(q) ||
-        (i.serialNumber && i.serialNumber.toLowerCase().includes(q))
-    );
-  }, [warehouseItems, searchQuery]);
-
-  const filteredVisits = useMemo(() => {
-    if (!searchQuery) return visits;
-    const q = searchQuery.toLowerCase();
-    return visits.filter((v) => v.name.toLowerCase().includes(q));
-  }, [visits, searchQuery]);
 
   const totalWarehouseQty = warehouseItems.reduce((a, i) => a + i.totalQty, 0);
   const activeVisitCount = visits.filter((v) => v.status === "active").length;
@@ -432,8 +414,6 @@ export default function Home() {
         }`}
       >
         <Header
-          searchQuery={searchQuery}
-          onSearch={setSearchQuery}
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           currentUser={currentUser}
         />
@@ -452,9 +432,8 @@ export default function Home() {
           )}
           {activeView === "warehouse" && (
             <WarehouseView
-              items={filteredWarehouseItems}
+              items={warehouseItems}
               categories={categories}
-              searchQuery={searchQuery}
               onAddItem={handleAddWarehouseItem}
               onEditItem={handleEditWarehouseItem}
               onDeleteItem={handleDeleteWarehouseItem}
@@ -488,7 +467,7 @@ export default function Home() {
           )}
           {activeView === "visits" && !selectedVisitId && (
             <VisitsView
-              visits={filteredVisits}
+              visits={visits}
               onSelectVisit={setSelectedVisitId}
               onAddVisit={handleAddVisit}
               onToggleVisit={handleToggleVisit}

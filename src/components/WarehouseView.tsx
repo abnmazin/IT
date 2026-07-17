@@ -7,7 +7,6 @@ import { Search, Plus, Package, Tag, Edit3, Trash2, X, Minus } from "lucide-reac
 interface WarehouseViewProps {
   items: WarehouseItem[];
   categories: Category[];
-  searchQuery: string;
   onAddItem: (name: string, category: string, serialNumber: string, totalQty: number) => void;
   onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number) => void;
   onDeleteItem: (id: string) => void;
@@ -17,7 +16,6 @@ interface WarehouseViewProps {
 export default function WarehouseView({
   items,
   categories,
-  searchQuery,
   onAddItem,
   onEditItem,
   onDeleteItem,
@@ -32,17 +30,24 @@ export default function WarehouseView({
   const [formQty, setFormQty] = useState(1);
   const [catLabel2, setCatLabel2] = useState("");
   const [catSerialTracked, setCatSerialTracked] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("All");
 
   const filtered = useMemo(() => {
-    if (!searchQuery) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        i.category.toLowerCase().includes(q) ||
-        (i.serialNumber && i.serialNumber.toLowerCase().includes(q))
-    );
-  }, [items, searchQuery]);
+    let result = items;
+    if (filterCategory !== "All") {
+      result = result.filter((i) => i.category === filterCategory);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          (i.serialNumber && i.serialNumber.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [items, search, filterCategory]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, WarehouseItem[]>();
@@ -163,6 +168,34 @@ export default function WarehouseView({
           </div>
         </div>
       )}
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="بحث بالاسم أو السيريال..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-3 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
+              <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+            </button>
+          )}
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="py-2.5 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
+        >
+          <option value="All">كل الفئات</option>
+          {categories.map((c) => (
+            <option key={c.key} value={c.key}>{c.label}</option>
+          ))}
+        </select>
+      </div>
 
       {showAdd && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">

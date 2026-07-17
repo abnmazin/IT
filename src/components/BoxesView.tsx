@@ -19,6 +19,7 @@ interface FlatBox {
 
 export default function BoxesView({ visits, categories, onSelectBox }: BoxesViewProps) {
   const [search, setSearch] = useState("");
+  const [filterVisit, setFilterVisit] = useState<string>("All");
 
   const allBoxes = useMemo(() => {
     const list: FlatBox[] = [];
@@ -36,15 +37,20 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
   }, [visits]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return allBoxes;
-    const q = search.trim().toLowerCase();
-    return allBoxes.filter(
-      (b) =>
-        b.box.name.toLowerCase().includes(q) ||
-        b.visitName.toLowerCase().includes(q) ||
-        b.box.items.some((i) => i.name.toLowerCase().includes(q))
-    );
-  }, [allBoxes, search]);
+    let result = allBoxes;
+    if (filterVisit !== "All") {
+      result = result.filter((b) => b.visitId === filterVisit);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(
+        (b) =>
+          b.box.name.toLowerCase().includes(q) ||
+          b.box.items.some((i) => i.name.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [allBoxes, search, filterVisit]);
 
   const activeBoxes = filtered.filter((b) => b.visitStatus === "active");
   const inactiveBoxes = filtered.filter((b) => b.visitStatus !== "active");
@@ -94,20 +100,32 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
         </p>
       </div>
 
-      <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          placeholder="بحث بالاسم، الزيارة، أو الصنف..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-10 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
-            <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-          </button>
-        )}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="بحث بالاسم أو الصنف..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-3 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
+              <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+            </button>
+          )}
+        </div>
+        <select
+          value={filterVisit}
+          onChange={(e) => setFilterVisit(e.target.value)}
+          className="py-2.5 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
+        >
+          <option value="All">كل الزيارات</option>
+          {visits.map((v) => (
+            <option key={v.id} value={v.id}>{v.name}</option>
+          ))}
+        </select>
       </div>
 
       {filtered.length === 0 ? (
