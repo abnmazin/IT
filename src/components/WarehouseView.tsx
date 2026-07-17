@@ -7,10 +7,10 @@ import { Search, Plus, Package, Tag, Edit3, Trash2, X, Minus } from "lucide-reac
 interface WarehouseViewProps {
   items: WarehouseItem[];
   categories: Category[];
-  onAddItem: (name: string, category: string, serialNumber: string, totalQty: number) => void;
-  onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number) => void;
+  onAddItem: (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
+  onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
   onDeleteItem: (id: string) => void;
-  onAddCategory: (key: string, label: string, serialTracked: boolean) => void;
+  onAddCategory: (key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
 }
 
 export default function WarehouseView({
@@ -28,8 +28,10 @@ export default function WarehouseView({
   const [formCategory, setFormCategory] = useState("");
   const [formSerial, setFormSerial] = useState("");
   const [formQty, setFormQty] = useState(1);
+  const [formConsumable, setFormConsumable] = useState(false);
   const [catLabel2, setCatLabel2] = useState("");
   const [catSerialTracked, setCatSerialTracked] = useState(false);
+  const [catConsumable, setCatConsumable] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("All");
 
@@ -64,6 +66,7 @@ export default function WarehouseView({
     setFormCategory(categories[0]?.key || "");
     setFormSerial("");
     setFormQty(1);
+    setFormConsumable(false);
     setShowAdd(false);
     setEditingItem(null);
   };
@@ -80,15 +83,16 @@ export default function WarehouseView({
     setFormCategory(item.category);
     setFormSerial(item.serialNumber || "");
     setFormQty(item.totalQty);
+    setFormConsumable(item.consumable);
     setShowAdd(true);
   };
 
   const handleSubmit = () => {
     if (!formName.trim()) return;
     if (editingItem) {
-      onEditItem(editingItem.id, formName.trim(), formCategory, formSerial.trim(), formQty);
+      onEditItem(editingItem.id, formName.trim(), formCategory, formSerial.trim(), formQty, formConsumable);
     } else {
-      onAddItem(formName.trim(), formCategory, formSerial.trim(), formQty);
+      onAddItem(formName.trim(), formCategory, formSerial.trim(), formQty, formConsumable);
     }
     resetForm();
   };
@@ -96,9 +100,10 @@ export default function WarehouseView({
   const handleAddCat = () => {
     if (!catLabel2.trim()) return;
     const key = catLabel2.trim().replace(/\s+/g, "_").toLowerCase();
-    onAddCategory(key, catLabel2.trim(), catSerialTracked);
+    onAddCategory(key, catLabel2.trim(), catSerialTracked, catConsumable);
     setCatLabel2("");
     setCatSerialTracked(false);
+    setCatConsumable(false);
     setShowAddCategory(false);
   };
 
@@ -141,14 +146,14 @@ export default function WarehouseView({
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <input
               type="text"
               placeholder="اسم الفئة (مثال: كابلات، شاشات...)"
               value={catLabel2}
               onChange={(e) => setCatLabel2(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAddCat()}
-              className="flex-1 px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="flex-1 min-w-[200px] px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
             <label className="flex items-center gap-2 text-sm text-slate-600 shrink-0 cursor-pointer select-none">
               <input
@@ -158,6 +163,15 @@ export default function WarehouseView({
                 className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
               />
               يتطلب سيريال
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600 shrink-0 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={catConsumable}
+                onChange={(e) => setCatConsumable(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+              />
+              استهلاكي
             </label>
             <button
               onClick={handleAddCat}
@@ -217,7 +231,11 @@ export default function WarehouseView({
             />
             <select
               value={formCategory}
-              onChange={(e) => setFormCategory(e.target.value)}
+              onChange={(e) => {
+                setFormCategory(e.target.value);
+                const cat = categories.find((c) => c.key === e.target.value);
+                if (cat) setFormConsumable(cat.consumable);
+              }}
               className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
               {categories.map((c) => (
@@ -240,6 +258,15 @@ export default function WarehouseView({
               className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={formConsumable}
+              onChange={(e) => setFormConsumable(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+            />
+            صنف استهلاكي (لا يُرجع بعد الاستخدام)
+          </label>
           <div className="flex gap-2">
             <button
               onClick={handleSubmit}
@@ -279,6 +306,9 @@ export default function WarehouseView({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
+                          {item.consumable && (
+                            <span className="text-[11px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">استهلاكي</span>
+                          )}
                           {item.serialNumber && (
                             <span className="text-[11px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded font-mono flex items-center gap-1 shrink-0">
                               <Tag className="w-3 h-3" />

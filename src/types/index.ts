@@ -15,6 +15,7 @@ export interface Category {
   key: ItemCategory;
   label: string;
   serialTracked: boolean;
+  consumable: boolean;
 }
 
 export const SERIAL_TRACKED_CATEGORIES: ItemCategory[] = [
@@ -29,16 +30,16 @@ export function isSerialTracked(category: ItemCategory): boolean {
 }
 
 export const defaultCategories: Category[] = [
-  { id: "cat-1", key: "Laptop", label: "لابتوب", serialTracked: true },
-  { id: "cat-2", key: "Keyboard", label: "لوحة مفاتيح", serialTracked: false },
-  { id: "cat-3", key: "Mouse", label: "ماوس", serialTracked: false },
-  { id: "cat-4", key: "Monitor", label: "شاشة", serialTracked: true },
-  { id: "cat-5", key: "Printer", label: "طابعة", serialTracked: true },
-  { id: "cat-6", key: "Cable", label: "كابل", serialTracked: false },
-  { id: "cat-7", key: "Label", label: "ملصق", serialTracked: false },
-  { id: "cat-8", key: "Headset", label: "سماعة", serialTracked: false },
-  { id: "cat-9", key: "Adapter", label: "محول", serialTracked: false },
-  { id: "cat-10", key: "Docking Station", label: "محطة اتصال", serialTracked: true },
+  { id: "cat-1", key: "Laptop", label: "لابتوب", serialTracked: true, consumable: false },
+  { id: "cat-2", key: "Keyboard", label: "لوحة مفاتيح", serialTracked: false, consumable: false },
+  { id: "cat-3", key: "Mouse", label: "ماوس", serialTracked: false, consumable: false },
+  { id: "cat-4", key: "Monitor", label: "شاشة", serialTracked: true, consumable: false },
+  { id: "cat-5", key: "Printer", label: "طابعة", serialTracked: true, consumable: false },
+  { id: "cat-6", key: "Cable", label: "كابل", serialTracked: false, consumable: true },
+  { id: "cat-7", key: "Label", label: "ملصق", serialTracked: false, consumable: true },
+  { id: "cat-8", key: "Headset", label: "سماعة", serialTracked: false, consumable: false },
+  { id: "cat-9", key: "Adapter", label: "محول", serialTracked: false, consumable: false },
+  { id: "cat-10", key: "Docking Station", label: "محطة اتصال", serialTracked: true, consumable: false },
 ];
 
 export interface WarehouseItem {
@@ -47,13 +48,15 @@ export interface WarehouseItem {
   category: ItemCategory;
   serialNumber?: string;
   totalQty: number;
+  consumable: boolean;
 }
 
-export type VisitStatus = "inactive" | "active" | "completed";
+export type VisitStatus = "inactive" | "active" | "collecting" | "completed";
 
 export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   inactive: "غير مفعلة",
   active: "مفعلة",
+  collecting: "جمع العناصر",
   completed: "مكتملة",
 };
 
@@ -61,6 +64,7 @@ export interface Visit {
   id: string;
   name: string;
   date: string;
+  hijriDate?: string;
   status: VisitStatus;
   boxes: Box[];
 }
@@ -78,7 +82,9 @@ export interface BoxItem {
   category: ItemCategory;
   serialNumber?: string;
   qty: number;
+  consumable: boolean;
   returnedQty?: number;
+  status?: "returned" | "consumed" | "missing";
 }
 
 export interface Transfer {
@@ -122,6 +128,34 @@ export interface User {
   active: boolean;
 }
 
+export interface VisitReport {
+  visitId: string;
+  visitName: string;
+  hijriDate?: string;
+  gregorianDate: string;
+  completedAt: string;
+  summary: {
+    totalDeployed: number;
+    totalReturned: number;
+    totalConsumed: number;
+    totalMissing: number;
+  };
+  boxReports: {
+    boxId: string;
+    boxName: string;
+    items: {
+      name: string;
+      category: ItemCategory;
+      serialNumber?: string;
+      deployedQty: number;
+      returnedQty: number;
+      consumedQty: number;
+      missingQty: number;
+      status: "returned" | "consumed" | "missing";
+    }[];
+  }[];
+}
+
 export type ActivityType =
   | "checkout"
   | "return"
@@ -129,6 +163,8 @@ export type ActivityType =
   | "add_item"
   | "add_visit"
   | "activate_visit"
+  | "collect_visit"
+  | "complete_visit"
   | "deactivate_visit"
   | "fill_box"
   | "return_items"
@@ -146,6 +182,8 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   add_item: "إضافة صنف",
   add_visit: "إضافة زيارة",
   activate_visit: "تفعيل زيارة",
+  collect_visit: "جمع العناصر",
+  complete_visit: "إنهاء زيارة",
   deactivate_visit: "إيقاف زيارة",
   fill_box: "تعبئة صندوق",
   return_items: "إرجاع مواد للمخزن",

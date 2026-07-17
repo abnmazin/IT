@@ -30,6 +30,8 @@ import VisitsView from "@/components/VisitsView";
 import VisitDetailView from "@/components/VisitDetailView";
 import BoxDetailView from "@/components/BoxDetailView";
 import BoxesView from "@/components/BoxesView";
+import CollectionView from "@/components/CollectionView";
+import VisitReport from "@/components/VisitReport";
 import TransfersView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
@@ -93,13 +95,14 @@ export default function Home() {
   );
 
   const handleAddWarehouseItem = useCallback(
-    (name: string, category: string, serialNumber: string, totalQty: number) => {
+    (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
       const newItem: WarehouseItem = {
         id: `wh-${Date.now()}`,
         name,
         category: category as WarehouseItem["category"],
         serialNumber: serialNumber || undefined,
         totalQty,
+        consumable,
       };
       setWarehouseItems((prev) => [...prev, newItem]);
       logActivity("add_item", `إضافة صنف للمخزن: ${name}`, `الكمية: ${totalQty}`);
@@ -108,11 +111,11 @@ export default function Home() {
   );
 
   const handleEditWarehouseItem = useCallback(
-    (id: string, name: string, category: string, serialNumber: string, totalQty: number) => {
+    (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
       setWarehouseItems((prev) =>
         prev.map((i) =>
           i.id === id
-            ? { ...i, name, category: category as WarehouseItem["category"], serialNumber: serialNumber || undefined, totalQty }
+            ? { ...i, name, category: category as WarehouseItem["category"], serialNumber: serialNumber || undefined, totalQty, consumable }
             : i
         )
       );
@@ -133,11 +136,12 @@ export default function Home() {
   );
 
   const handleAddVisit = useCallback(
-    (name: string, date: string) => {
+    (name: string, date: string, hijriDate?: string) => {
       const newVisit: Visit = {
         id: `visit-${Date.now()}`,
         name,
         date,
+        hijriDate: hijriDate || undefined,
         status: "inactive",
         boxes: [],
       };
@@ -152,18 +156,47 @@ export default function Home() {
       setVisits((prev) =>
         prev.map((v) => {
           if (v.id !== visitId) return v;
-          const newStatus = v.status === "active" ? "completed" : "active";
-          return { ...v, status: newStatus };
+          if (v.status === "inactive") return { ...v, status: "active" as const };
+          if (v.status === "active") return { ...v, status: "collecting" as const };
+          if (v.status === "collecting") return { ...v, status: "completed" as const };
+          return { ...v, status: "inactive" as const };
         })
       );
       const visit = visits.find((v) => v.id === visitId);
       if (visit) {
-        const newStatus = visit.status === "active" ? "completed" : "active";
+        const nextStatus = visit.status === "inactive" ? "active" : visit.status === "active" ? "collecting" : visit.status === "collecting" ? "completed" : "inactive";
         logActivity(
-          newStatus === "active" ? "activate_visit" : "deactivate_visit",
-          `${newStatus === "active" ? "تفعيل" : "إيقاف"} زيارة: ${visit.name}`
+          nextStatus === "active" ? "activate_visit" : nextStatus === "collecting" ? "collect_visit" : nextStatus === "completed" ? "complete_visit" : "deactivate_visit",
+          `${nextStatus === "active" ? "تفعيل" : nextStatus === "collecting" ? "جمع العناصر" : nextStatus === "completed" ? "إنهاء" : "إلغاء تفعيل"} زيارة: ${visit.name}`
         );
       }
+    },
+    [visits, logActivity]
+  );
+
+  const handleCollectVisit = useCallback(
+    (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          return {
+            ...v,
+            status: "completed" as const,
+            boxes: v.boxes.map((b) => ({
+              ...b,
+              items: b.items.map((bi) => {
+                const c = collected.find((x) => x.warehouseItemId === bi.warehouseItemId);
+                if (c) {
+                  return { ...bi, status: c.status, returnedQty: c.status === "returned" ? c.qty : 0 };
+                }
+                return { ...bi, status: "missing" as const };
+              }),
+            })),
+          };
+        })
+      );
+      const visit = visits.find((v) => v.id === visitId);
+      logActivity("complete_visit", `إنهاء زيارة: ${visit?.name || ""}`, `تم جمع ${collected.length} صنف`);
     },
     [visits, logActivity]
   );
@@ -315,8 +348,8 @@ export default function Home() {
   );
 
   const handleAddCategory = useCallback(
-    (key: string, label: string, serialTracked: boolean) => {
-      const newCat: Category = { id: `cat-${Date.now()}`, key: key as Category["key"], label, serialTracked };
+    (key: string, label: string, serialTracked: boolean, consumable: boolean) => {
+      const newCat: Category = { id: `cat-${Date.now()}`, key: key as Category["key"], label, serialTracked, consumable };
       setCategories((prev) => [...prev, newCat]);
       logActivity("add_category", `إضافة فئة جديدة: ${label}`);
     },
@@ -324,9 +357,9 @@ export default function Home() {
   );
 
   const handleEditCategory = useCallback(
-    (id: string, key: string, label: string, serialTracked: boolean) => {
+    (id: string, key: string, label: string, serialTracked: boolean, consumable: boolean) => {
       setCategories((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, key: key as Category["key"], label, serialTracked } : c))
+        prev.map((c) => (c.id === id ? { ...c, key: key as Category["key"], label, serialTracked, consumable } : c))
       );
       logActivity("edit_category", `تعديل الفئة: ${label}`);
     },
@@ -473,7 +506,7 @@ export default function Home() {
               onToggleVisit={handleToggleVisit}
             />
           )}
-          {activeView === "visits" && selectedVisit && !selectedBoxId && (
+          {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (
             <VisitDetailView
               visit={selectedVisit}
               warehouseItems={warehouseItems}
@@ -485,6 +518,23 @@ export default function Home() {
               onReturnItems={handleReturnItems}
               onAddBox={handleAddBox}
               onDeleteBox={handleDeleteBox}
+              onStartCollect={handleToggleVisit}
+            />
+          )}
+          {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status === "collecting" && (
+            <CollectionView
+              visit={selectedVisit}
+              warehouseItems={warehouseItems}
+              categories={categories}
+              onBack={() => setSelectedVisitId(null)}
+              onComplete={handleCollectVisit}
+            />
+          )}
+          {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status === "completed" && (
+            <VisitReport
+              visit={selectedVisit}
+              categories={categories}
+              onBack={() => setSelectedVisitId(null)}
             />
           )}
           {activeView === "visits" && selectedVisit && selectedBoxId && selectedBox && (

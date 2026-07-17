@@ -16,6 +16,8 @@ import {
   Edit2,
   Filter,
   Tag,
+  ClipboardList,
+  CheckCircle,
 } from "lucide-react";
 
 interface ActivityLogViewProps {
@@ -29,6 +31,8 @@ const TYPE_ICONS: Record<ActivityType, React.ElementType> = {
   add_item: Plus,
   add_visit: Plus,
   activate_visit: LogIn,
+  collect_visit: ClipboardList,
+  complete_visit: CheckCircle,
   deactivate_visit: LogOut,
   fill_box: Plus,
   return_items: LogIn,
@@ -47,6 +51,8 @@ const TYPE_COLORS: Record<ActivityType, string> = {
   add_item: "bg-emerald-50 text-emerald-600",
   add_visit: "bg-emerald-50 text-emerald-600",
   activate_visit: "bg-emerald-50 text-emerald-600",
+  collect_visit: "bg-amber-50 text-amber-600",
+  complete_visit: "bg-sky-50 text-sky-600",
   deactivate_visit: "bg-red-50 text-red-600",
   fill_box: "bg-sky-50 text-sky-600",
   return_items: "bg-amber-50 text-amber-600",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Visit, BoxItem, WarehouseItem, Category, VisitStatus } from "@/types";
-import { ArrowRight, Plus, Package, Play, Square, CheckCircle, X } from "lucide-react";
+import { ArrowRight, Plus, Package, Play, Square, CheckCircle, X, AlertTriangle, ClipboardList } from "lucide-react";
 
 interface VisitDetailViewProps {
   visit: Visit;
@@ -15,11 +15,13 @@ interface VisitDetailViewProps {
   onReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
   onAddBox: (visitId: string, name: string, label: string) => void;
   onDeleteBox: (visitId: string, boxId: string) => void;
+  onStartCollect: (visitId: string) => void;
 }
 
 const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: string }> = {
   inactive: { label: "غير مفعلة", color: "text-slate-500", bg: "bg-slate-100" },
   active: { label: "مفعلة", color: "text-emerald-600", bg: "bg-emerald-50" },
+  collecting: { label: "جمع العناصر", color: "text-amber-600", bg: "bg-amber-50" },
   completed: { label: "مكتملة", color: "text-sky-600", bg: "bg-sky-50" },
 };
 
@@ -32,13 +34,18 @@ export default function VisitDetailView({
   onToggleVisit,
   onAddBox,
   onDeleteBox,
+  onStartCollect,
 }: VisitDetailViewProps) {
   const [showAddBox, setShowAddBox] = useState(false);
+  const [showActivateConfirm, setShowActivateConfirm] = useState(false);
   const [boxName, setBoxName] = useState("");
   const [boxLabel, setBoxLabel] = useState("");
 
   const cfg = STATUS_CONFIG[visit.status];
   const isActive = visit.status === "active";
+  const isCollecting = visit.status === "collecting";
+  const isInactive = visit.status === "inactive";
+  const isCompleted = visit.status === "completed";
 
   const totalItems = visit.boxes.reduce(
     (a, b) => a + b.items.reduce((c, i) => c + i.qty, 0),
@@ -70,40 +77,87 @@ export default function VisitDetailView({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            {visit.date} · {visit.boxes.length} صناديق · {totalItems} قطعة
+            {visit.date}{visit.hijriDate ? ` (${visit.hijriDate})` : ""} · {visit.boxes.length} صناديق · {totalItems} قطعة
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          {isActive && (
+          {isInactive && (
             <button
-              onClick={() => onToggleVisit(visit.id)}
-              className="flex items-center gap-2 px-3 py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
-            >
-              <Square className="w-4 h-4" />
-              <span className="hidden sm:inline">إيقاف</span>
-            </button>
-          )}
-          {!isActive && (
-            <button
-              onClick={() => onToggleVisit(visit.id)}
+              onClick={() => setShowActivateConfirm(true)}
               className="flex items-center gap-2 px-3 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
             >
               <Play className="w-4 h-4" />
               <span className="hidden sm:inline">تفعيل</span>
             </button>
           )}
+          {isActive && (
+            <>
+              <button
+                onClick={() => onStartCollect(visit.id)}
+                className="flex items-center gap-2 px-3 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span className="hidden sm:inline">جمع العناصر</span>
+              </button>
+              <button
+                onClick={() => onToggleVisit(visit.id)}
+                className="flex items-center gap-2 px-3 py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+              >
+                <Square className="w-4 h-4" />
+                <span className="hidden sm:inline">إيقاف</span>
+              </button>
+            </>
+          )}
+          {isCompleted && (
+            <button
+              onClick={() => onToggleVisit(visit.id)}
+              className="flex items-center gap-2 px-3 py-2.5 bg-sky-50 text-sky-600 rounded-lg text-sm font-medium hover:bg-sky-100 transition-colors"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">إعادة</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setShowAddBox(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          إضافة صندوق
-        </button>
-      </div>
+      {showActivateConfirm && (
+        <div className="bg-white rounded-xl border border-emerald-200 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-emerald-600" />
+            <h3 className="text-sm font-semibold text-slate-900">تأكيد تفعيل الزيارة</h3>
+          </div>
+          <p className="text-sm text-slate-600">
+            سيتم تفعيل الزيارة "<strong>{visit.name}</strong>" وفتح الصناديق للتعبئة.
+            {visit.boxes.length > 0 && ` يوجد ${visit.boxes.length} صندوق جاهز.`}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { onToggleVisit(visit.id); setShowActivateConfirm(false); }}
+              className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700"
+            >
+              تفعيل
+            </button>
+            <button
+              onClick={() => setShowActivateConfirm(false)}
+              className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(isActive || isInactive) && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowAddBox(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            إضافة صندوق
+          </button>
+        </div>
+      )}
 
       {showAddBox && (
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">

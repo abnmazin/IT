@@ -6,8 +6,8 @@ import { Plus, Edit2, Trash2, X, Tag, ToggleLeft, ToggleRight } from "lucide-rea
 
 interface CategoriesSettingsProps {
   categories: Category[];
-  onAdd: (key: string, label: string, serialTracked: boolean) => void;
-  onEdit: (id: string, key: string, label: string, serialTracked: boolean) => void;
+  onAdd: (key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
+  onEdit: (id: string, key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
   onDelete: (id: string) => void;
 }
 
@@ -22,12 +22,14 @@ export default function CategoriesSettings({
   const [key, setKey] = useState("");
   const [label, setLabel] = useState("");
   const [serialTracked, setSerialTracked] = useState(false);
+  const [consumable, setConsumable] = useState(false);
 
   const openAdd = () => {
     setEditingCat(null);
     setKey("");
     setLabel("");
     setSerialTracked(false);
+    setConsumable(false);
     setShowModal(true);
   };
 
@@ -36,6 +38,7 @@ export default function CategoriesSettings({
     setKey(cat.key);
     setLabel(cat.label);
     setSerialTracked(cat.serialTracked);
+    setConsumable(cat.consumable);
     setShowModal(true);
   };
 
@@ -43,9 +46,9 @@ export default function CategoriesSettings({
     e.preventDefault();
     if (!key.trim() || !label.trim()) return;
     if (editingCat) {
-      onEdit(editingCat.id, key.trim(), label.trim(), serialTracked);
+      onEdit(editingCat.id, key.trim(), label.trim(), serialTracked, consumable);
     } else {
-      onAdd(key.trim(), label.trim(), serialTracked);
+      onAdd(key.trim(), label.trim(), serialTracked, consumable);
     }
     setShowModal(false);
   };
@@ -72,10 +75,11 @@ export default function CategoriesSettings({
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto_auto] gap-4 items-center px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wider">
+        <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wider">
           <span>المفتاح (EN)</span>
           <span>الاسم (AR)</span>
-          <span>رقم تسلسلي</span>
+          <span>تسلسلي</span>
+          <span>استهلاكي</span>
           <span />
         </div>
         <div className="divide-y divide-slate-100">
@@ -87,7 +91,7 @@ export default function CategoriesSettings({
             categories.map((cat) => (
               <div
                 key={cat.id}
-                className="flex flex-col sm:grid sm:grid-cols-[1fr_1fr_auto_auto] gap-2 sm:gap-4 items-start sm:items-center px-5 py-3 hover:bg-slate-50 transition-colors"
+                className="flex flex-col sm:grid sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-2 sm:gap-4 items-start sm:items-center px-5 py-3 hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-slate-400" />
@@ -102,6 +106,15 @@ export default function CategoriesSettings({
                   }`}
                 >
                   {cat.serialTracked ? "تسلسلي" : "كمي"}
+                </span>
+                <span
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    cat.consumable
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {cat.consumable ? "استهلاكي" : "يعاد"}
                 </span>
                 <div className="flex items-center gap-1">
                   <button
@@ -186,6 +199,23 @@ export default function CategoriesSettings({
                 >
                   {serialTracked ? (
                     <ToggleRight className="w-12 h-12 text-sky-500" />
+                  ) : (
+                    <ToggleLeft className="w-12 h-12" />
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-slate-700">صنف استهلاكي</p>
+                  <p className="text-xs text-slate-400">المواد التي لا تُرجع بعد الاستخدام (كابلات، ملصقات)</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConsumable((v) => !v)}
+                  className="text-slate-500"
+                >
+                  {consumable ? (
+                    <ToggleRight className="w-12 h-12 text-amber-500" />
                   ) : (
                     <ToggleLeft className="w-12 h-12" />
                   )}

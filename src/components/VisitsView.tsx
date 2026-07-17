@@ -2,18 +2,19 @@
 
 import { useState } from "react";
 import { Visit, VisitStatus } from "@/types";
-import { Plus, MapPin, Calendar, X, Play, Square, CheckCircle } from "lucide-react";
+import { Plus, MapPin, Calendar, X, Play, CheckCircle, Package } from "lucide-react";
 
 interface VisitsViewProps {
   visits: Visit[];
   onSelectVisit: (visitId: string) => void;
-  onAddVisit: (name: string, date: string) => void;
+  onAddVisit: (name: string, date: string, hijriDate?: string) => void;
   onToggleVisit: (visitId: string) => void;
 }
 
 const STATUS_CONFIG: Record<VisitStatus, { label: string; color: string; bg: string; border: string }> = {
   inactive: { label: "غير مفعلة", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" },
   active: { label: "مفعلة", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-300" },
+  collecting: { label: "جمع العناصر", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-300" },
   completed: { label: "مكتملة", color: "text-sky-700", bg: "bg-sky-50", border: "border-sky-300" },
 };
 
@@ -26,16 +27,19 @@ export default function VisitsView({
   const [showAdd, setShowAdd] = useState(false);
   const [formName, setFormName] = useState("");
   const [formDate, setFormDate] = useState("");
+  const [formHijri, setFormHijri] = useState("");
 
   const handleAdd = () => {
     if (!formName.trim() || !formDate) return;
-    onAddVisit(formName.trim(), formDate);
+    onAddVisit(formName.trim(), formDate, formHijri.trim() || undefined);
     setFormName("");
     setFormDate("");
+    setFormHijri("");
     setShowAdd(false);
   };
 
   const activeVisits = visits.filter((v) => v.status === "active");
+  const collectingVisits = visits.filter((v) => v.status === "collecting");
   const inactiveVisits = visits.filter((v) => v.status === "inactive");
   const completedVisits = visits.filter((v) => v.status === "completed");
 
@@ -75,10 +79,19 @@ export default function VisitsView({
           {visit.status === "active" && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-red-50 text-red-600 rounded-lg text-[11px] font-medium hover:bg-red-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[11px] font-medium hover:bg-amber-100 transition-colors"
             >
-              <Square className="w-3 h-3" />
-              إيقاف
+              <Package className="w-3 h-3" />
+              جمع
+            </button>
+          )}
+          {visit.status === "collecting" && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-[11px] font-medium hover:bg-sky-100 transition-colors"
+            >
+              <CheckCircle className="w-3 h-3" />
+              إنهاء
             </button>
           )}
           {visit.status === "inactive" && (
@@ -93,9 +106,8 @@ export default function VisitsView({
           {visit.status === "completed" && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-[11px] font-medium hover:bg-sky-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[11px] font-medium hover:bg-slate-200 transition-colors"
             >
-              <CheckCircle className="w-3 h-3" />
               إعادة
             </button>
           )}
@@ -130,7 +142,7 @@ export default function VisitsView({
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
               type="text"
               placeholder="اسم الزيارة (مثل: زيارة النجف)"
@@ -142,6 +154,13 @@ export default function VisitsView({
               type="date"
               value={formDate}
               onChange={(e) => setFormDate(e.target.value)}
+              className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <input
+              type="text"
+              placeholder="التاريخ الهجري (اختياري)"
+              value={formHijri}
+              onChange={(e) => setFormHijri(e.target.value)}
               className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
@@ -164,6 +183,18 @@ export default function VisitsView({
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
             {activeVisits.map(renderVisit)}
+          </div>
+        </div>
+      )}
+
+      {collectingVisits.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-amber-600 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            جمع العناصر
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            {collectingVisits.map(renderVisit)}
           </div>
         </div>
       )}

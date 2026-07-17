@@ -86,6 +86,7 @@ export default function BoxDetailView({
           category: whItem?.category || "Cable",
           serialNumber: whItem?.serialNumber,
           qty: fi.qty,
+          consumable: whItem?.consumable ?? false,
         };
       });
     if (items.length > 0) {
