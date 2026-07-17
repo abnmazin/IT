@@ -6,7 +6,7 @@ import {
   Warehouse,
   Package,
   MapPin,
-  Truck,
+  CheckCircle,
   Users,
   Tag,
   ClipboardList,
@@ -20,7 +20,7 @@ const navItems: { id: View; label: string; icon: React.ElementType }[] = [
   { id: "warehouse", label: "المخزن", icon: Warehouse },
   { id: "boxes", label: "الصناديق", icon: Package },
   { id: "visits", label: "الزيارات", icon: MapPin },
-  { id: "transfers", label: "سجل النقل", icon: Truck },
+  { id: "completed-visits", label: "الزيارات المكتملة", icon: CheckCircle },
 ];
 
 const bottomItems: { id: View; label: string; icon: React.ElementType }[] = [

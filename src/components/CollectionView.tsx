@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Visit, Box, BoxItem, WarehouseItem, Category, ItemCategory } from "@/types";
-import { ArrowRight, Package, CheckCircle, Trash2, AlertTriangle, Tag } from "lucide-react";
+import { ArrowRight, Package, CheckCircle, Tag, ChevronDown, ChevronUp, RotateCcw, Minus, Plus } from "lucide-react";
 
 interface CollectionViewProps {
   visit: Visit;
@@ -17,10 +17,11 @@ interface CollectItem {
   name: string;
   category: ItemCategory;
   serialNumber?: string;
-  qty: number;
+  deployedQty: number;
+  returnedQty: number;
   consumable: boolean;
+  boxId: string;
   boxName: string;
-  status: "returned" | "consumed" | "missing";
 }
 
 export default function CollectionView({
@@ -39,53 +40,124 @@ export default function CollectionView({
           name: bi.name,
           category: bi.category,
           serialNumber: bi.serialNumber,
-          qty: bi.qty,
+          deployedQty: bi.qty,
+          returnedQty: bi.consumable ? 0 : bi.qty,
           consumable: bi.consumable,
+          boxId: box.id,
           boxName: box.name,
-          status: bi.consumable ? "consumed" : "returned",
         });
       }
     }
     return list;
   });
 
+  const [expandedBox, setExpandedBox] = useState<string | null>(() => visit.boxes[0]?.id || null);
+  const [viewMode, setViewMode] = useState<"box" | "category">("box");
+
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
 
   const summary = useMemo(() => {
-    const returned = items.filter((i) => i.status === "returned");
-    const consumed = items.filter((i) => i.status === "consumed");
-    const missing = items.filter((i) => i.status === "missing");
-    return {
-      total: items.length,
-      returnedQty: returned.reduce((a, i) => a + i.qty, 0),
-      consumedQty: consumed.reduce((a, i) => a + i.qty, 0),
-      missingQty: missing.reduce((a, i) => a + i.qty, 0),
-      returnedCount: returned.length,
-      consumedCount: consumed.length,
-      missingCount: missing.length,
-    };
+    const totalDeployed = items.reduce((a, i) => a + i.deployedQty, 0);
+    const totalReturned = items.reduce((a, i) => a + i.returnedQty, 0);
+    const totalConsumed = items.filter((i) => i.consumable).reduce((a, i) => a + (i.deployedQty - i.returnedQty), 0);
+    const totalMissing = items.filter((i) => !i.consumable).reduce((a, i) => a + (i.deployedQty - i.returnedQty), 0);
+    return { totalDeployed, totalReturned, totalConsumed, totalMissing };
   }, [items]);
 
-  const missingNonConsumable = items.filter((i) => i.status === "missing" && !i.consumable);
+  const groupedByBox = useMemo(() => {
+    const groups: Record<string, { boxName: string; items: CollectItem[] }> = {};
+    for (const item of items) {
+      if (!groups[item.boxId]) groups[item.boxId] = { boxName: item.boxName, items: [] };
+      groups[item.boxId].items.push(item);
+    }
+    return groups;
+  }, [items]);
 
-  const toggleStatus = (idx: number) => {
+  const groupedByCategory = useMemo(() => {
+    const groups: Record<string, CollectItem[]> = {};
+    for (const item of items) {
+      if (!groups[item.category]) groups[item.category] = [];
+      groups[item.category].push(item);
+    }
+    return groups;
+  }, [items]);
+
+  const setReturnedQty = (warehouseItemId: string, qty: number) => {
     setItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        if (item.status === "returned") return { ...item, status: "consumed" as const };
-        if (item.status === "consumed") return { ...item, status: "missing" as const };
-        return { ...item, status: "returned" as const };
+      prev.map((item) => {
+        if (item.warehouseItemId !== warehouseItemId) return item;
+        const clamped = Math.max(0, Math.min(qty, item.deployedQty));
+        return { ...item, returnedQty: clamped };
       })
     );
   };
 
+  const missingNonConsumable = items.filter(
+    (i) => !i.consumable && i.returnedQty < i.deployedQty
+  );
+
   const handleComplete = () => {
     const collected = items.map((i) => ({
       warehouseItemId: i.warehouseItemId,
-      qty: i.qty,
-      status: i.status as "returned" | "consumed",
+      qty: i.returnedQty,
+      status: (i.returnedQty > 0 ? "returned" : "consumed") as "returned" | "consumed",
     }));
     onComplete(visit.id, collected);
+  };
+
+  const renderItem = (item: CollectItem) => {
+    const missing = item.deployedQty - item.returnedQty;
+    return (
+      <div key={item.warehouseItemId} className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+            item.returnedQty === item.deployedQty ? "bg-emerald-100" : item.returnedQty > 0 ? "bg-amber-100" : "bg-slate-100"
+          }`}>
+            {item.returnedQty === item.deployedQty ? (
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
+              {item.serialNumber && (
+                <Tag className="w-3 h-3 text-sky-500 shrink-0" />
+              )}
+              {item.consumable && (
+                <span className="text-[10px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded shrink-0">استهلاكي</span>
+              )}
+            </div>
+            <span className="text-[11px] text-slate-400">{catLabel(item.category)} · مُرسل: {item.deployedQty}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setReturnedQty(item.warehouseItemId, item.returnedQty - 1)}
+            disabled={item.returnedQty <= 0}
+            className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 disabled:opacity-30"
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+          <span className={`w-7 text-center text-sm font-bold ${
+            item.returnedQty === item.deployedQty ? "text-emerald-700" : item.returnedQty > 0 ? "text-amber-700" : "text-red-600"
+          }`}>
+            {item.returnedQty}
+          </span>
+          <button
+            onClick={() => setReturnedQty(item.warehouseItemId, item.returnedQty + 1)}
+            disabled={item.returnedQty >= item.deployedQty}
+            className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+          {missing > 0 && !item.consumable && (
+            <span className="text-[10px] text-red-500 font-medium mr-1">-{missing}</span>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -105,103 +177,123 @@ export default function CollectionView({
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            حدد حالة كل صنف: عاد للمخزن، استُهلك، أو مفقود
+            حدد عدد المعاد من كل صنف — المواد الاستهلاكية لا تُرجع
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
-          <p className="text-xl font-bold text-slate-900">{summary.total}</p>
-          <p className="text-[11px] text-slate-500">إجمالي العناصر</p>
+          <p className="text-xl font-bold text-slate-900">{summary.totalDeployed}</p>
+          <p className="text-[11px] text-slate-500">إجمالي المُرسل</p>
         </div>
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3 text-center">
-          <p className="text-xl font-bold text-emerald-700">{summary.returnedQty}</p>
+          <p className="text-xl font-bold text-emerald-700">{summary.totalReturned}</p>
           <p className="text-[11px] text-emerald-600">عاد للمخزن</p>
         </div>
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-3 text-center">
-          <p className="text-xl font-bold text-amber-700">{summary.consumedQty}</p>
+          <p className="text-xl font-bold text-amber-700">{summary.totalConsumed}</p>
           <p className="text-[11px] text-amber-600">استُهلك</p>
         </div>
         <div className="bg-red-50 rounded-xl border border-red-200 p-3 text-center">
-          <p className="text-xl font-bold text-red-700">{summary.missingQty}</p>
-          <p className="text-[11px] text-red-600">مفقود</p>
+          <p className="text-xl font-bold text-red-700">{summary.totalMissing}</p>
+          <p className="text-[11px] text-red-600">لم يُرجع</p>
         </div>
       </div>
 
       {missingNonConsumable.length > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h3 className="text-sm font-semibold text-red-800">تنبيه: عناصر غير استهلاكية مفقودة</h3>
-          </div>
-          <p className="text-sm text-red-700 mb-2">العناصر التالية يجب إرجاعها ولا تُ considers استهلاكية:</p>
-          <div className="space-y-1">
-            {missingNonConsumable.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm text-red-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                <span>{item.name}</span>
-                <span className="text-red-500">× {item.qty}</span>
-                <span className="text-red-400">({item.boxName})</span>
-              </div>
-            ))}
-          </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <p className="text-sm font-medium text-amber-800">
+            ⚠️ يوجد {missingNonConsumable.length} عناصر غير استهلاكية لم تُرجع بالكامل
+          </p>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="divide-y divide-slate-100">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-3 px-3 sm:px-5 py-3 hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  item.status === "returned" ? "bg-emerald-100" : item.status === "consumed" ? "bg-amber-100" : "bg-red-100"
-                }`}>
-                  {item.status === "returned" ? (
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  ) : item.status === "consumed" ? (
-                    <Trash2 className="w-4 h-4 text-amber-600" />
-                  ) : (
-                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                  )}
-                </div>
-                <div className="min-w-0">
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode("box")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            viewMode === "box" ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          حسب الصندوق
+        </button>
+        <button
+          onClick={() => setViewMode("category")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            viewMode === "category" ? "bg-sky-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          حسب الفئة
+        </button>
+      </div>
+
+      {viewMode === "box" ? (
+        <div className="space-y-2">
+          {Object.entries(groupedByBox).map(([boxId, group]) => {
+            const isExpanded = expandedBox === boxId;
+            const boxReturned = group.items.reduce((a, i) => a + i.returnedQty, 0);
+            const boxTotal = group.items.reduce((a, i) => a + i.deployedQty, 0);
+            return (
+              <div key={boxId} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <button
+                  onClick={() => setExpandedBox(isExpanded ? null : boxId)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
-                    {item.serialNumber && (
-                      <span className="text-[11px] text-sky-600 font-mono bg-sky-50 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
-                        <Tag className="w-3 h-3" />
-                        {item.serialNumber}
-                      </span>
-                    )}
-                    {item.consumable && (
-                      <span className="text-[11px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">استهلاكي</span>
-                    )}
+                    <Package className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm font-semibold text-slate-800">{group.boxName}</span>
+                    <span className="text-[11px] text-slate-400">{group.items.length} صنف</span>
                   </div>
-                  <span className="text-[11px] text-slate-400">{catLabel(item.category)} · {item.boxName} · ×{item.qty}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                      boxReturned === boxTotal ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {boxReturned}/{boxTotal}
+                    </span>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="border-t border-slate-100 divide-y divide-slate-50">
+                    {group.items.map(renderItem)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {Object.entries(groupedByCategory).map(([cat, catItems]) => {
+            const catReturned = catItems.reduce((a, i) => a + i.returnedQty, 0);
+            const catTotal = catItems.reduce((a, i) => a + i.deployedQty, 0);
+            return (
+              <div key={cat} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-800">{catLabel(cat)}</span>
+                    <span className="text-[11px] text-slate-400">{catItems.length} صنف</span>
+                  </div>
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                    catReturned === catTotal ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+                  }`}>
+                    {catReturned}/{catTotal}
+                  </span>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {catItems.map(renderItem)}
                 </div>
               </div>
-              <button
-                onClick={() => toggleStatus(idx)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors shrink-0 ${
-                  item.status === "returned"
-                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                    : item.status === "consumed"
-                    ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                    : "bg-red-100 text-red-700 hover:bg-red-200"
-                }`}
-              >
-                {item.status === "returned" ? "عاد" : item.status === "consumed" ? "استُهلك" : "مفقود"}
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
+      )}
 
       <div className="flex gap-2">
         <button
           onClick={handleComplete}
-          className="px-6 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
+          className="px-6 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors"
         >
           إنهاء الزيارة وحفظ التقرير
         </button>

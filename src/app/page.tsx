@@ -32,7 +32,7 @@ import BoxDetailView from "@/components/BoxDetailView";
 import BoxesView from "@/components/BoxesView";
 import CollectionView from "@/components/CollectionView";
 import VisitReport from "@/components/VisitReport";
-import TransfersView from "@/components/TransfersView";
+import CompletedVisitsView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
 import ActivityLogView from "@/components/ActivityLogView";
@@ -552,8 +552,14 @@ export default function Home() {
               onDeleteItem={handleDeleteBoxItem}
             />
           )}
-          {activeView === "transfers" && (
-            <TransfersView transfers={transfers} />
+          {activeView === "completed-visits" && (
+            <CompletedVisitsView
+              visits={visits}
+              categories={categories}
+              onSelectVisit={(visitId) => {
+                setSelectedVisitId(visitId);
+              }}
+            />
           )}
           {activeView === "users" && (
             <SettingsView

@@ -107,7 +107,7 @@ export type View =
   | "warehouse"
   | "boxes"
   | "visits"
-  | "transfers"
+  | "completed-visits"
   | "users"
   | "categories-settings"
   | "activity-log";

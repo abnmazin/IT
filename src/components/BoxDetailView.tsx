@@ -219,7 +219,7 @@ export default function BoxDetailView({
                                   onClick={() => {
                                     if (currentFill > 0) {
                                       setFillItems((prev) =>
-                                        prev.map((f) => f.warehouseItemId === whItem.id ? { ...f, qty: f.qty - 1 } : f).filter((f) => f.qty > 0)
+                                        prev.map((f) => f.warehouseItemId === whItem.id ? { ...f, qty: f.qty - 1 } : f)
                                       );
                                     }
                                   }}
