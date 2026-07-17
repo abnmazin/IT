@@ -69,11 +69,11 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-3 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
         />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
-            <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-          </button>
-        )}
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
+              <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
+            </button>
+          )}
       </div>
 
       {boxes.length === 0 ? (

@@ -142,7 +142,7 @@ export default function WarehouseView({
         <div className="bg-white rounded-xl border border-violet-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">إضافة فئة جديدة</h3>
-            <button onClick={() => setShowAddCategory(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <button onClick={() => setShowAddCategory(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -194,8 +194,8 @@ export default function WarehouseView({
             className="w-full pl-3 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
           />
           {search && (
-            <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
-              <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
+            <button onClick={() => setSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
+              <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
             </button>
           )}
         </div>
@@ -217,7 +217,7 @@ export default function WarehouseView({
             <h3 className="text-sm font-semibold text-slate-900">
               {editingItem ? "تعديل الصنف" : "إضافة صنف جديد"}
             </h3>
-            <button onClick={resetForm} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <button onClick={resetForm} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -309,7 +309,7 @@ export default function WarehouseView({
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
                       <Package className="w-5 h-5 text-slate-500" />
                     </div>
-                    <span className="text-sm font-bold text-slate-900 leading-tight">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900 leading-tight truncate">{item.name}</span>
                     {item.consumable && (
                       <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">استهلاكي</span>
                     )}
@@ -325,18 +325,18 @@ export default function WarehouseView({
                     </span>
                     <span className="text-[10px] text-slate-400">قطعة</span>
                   </div>
-                  <div className="flex gap-1 w-full">
+                  <div className="flex gap-1.5 w-full">
                     <button
                       onClick={() => openEdit(item)}
-                      className="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors"
+                      className="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center"
                     >
                       تعديل
                     </button>
                     <button
                       onClick={() => onDeleteItem(item.id)}
-                      className="py-1.5 px-2.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                      className="py-2.5 px-3 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors min-h-[44px] flex items-center justify-center"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ export default function WarehouseView({
         );
       })}
       {filtered.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
           <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-400">لا توجد عناصر في المخزن.</p>
         </div>

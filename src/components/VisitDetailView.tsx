@@ -65,7 +65,7 @@ export default function VisitDetailView({
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+          className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
           <ArrowRight className="w-5 h-5" />
         </button>
@@ -163,7 +163,7 @@ export default function VisitDetailView({
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">إضافة صندوق جديد</h3>
-            <button onClick={() => setShowAddBox(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <button onClick={() => setShowAddBox(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -224,7 +224,7 @@ export default function VisitDetailView({
         })}
 
         {visit.boxes.length === 0 && (
-          <div className="col-span-full bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <div className="col-span-full bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
             <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm text-slate-400">لا توجد صناديق بعد — أضف صندوقاً للبدء</p>
           </div>
