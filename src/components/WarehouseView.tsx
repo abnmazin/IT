@@ -73,7 +73,7 @@ export default function WarehouseView({
 
   const openAdd = () => {
     resetForm();
-    setFormCategory(categories[0]?.key || "");
+    setFormCategory(filterCategory !== "All" ? filterCategory : categories[0]?.key || "");
     setShowAdd(true);
   };
 
