@@ -284,76 +284,73 @@ export default function WarehouseView({
         </div>
       )}
 
-      <div className="space-y-3">
-        {Array.from(grouped.entries()).map(([catKey, catItems]) => {
-          const totalInCat = catItems.reduce((a, i) => a + i.totalQty, 0);
-          return (
-            <div key={catKey} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm font-semibold text-slate-900">{catLabel(catKey)}</span>
-                </div>
-                <span className="text-xs text-slate-500">{catItems.length} صنف · {totalInCat} قطعة</span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {catItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                        <Package className="w-4 h-4 text-slate-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
-                          {item.consumable && (
-                            <span className="text-[11px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">استهلاكي</span>
-                          )}
-                          {item.serialNumber && (
-                            <span className="text-[11px] text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded font-mono flex items-center gap-1 shrink-0">
-                              <Tag className="w-3 h-3" />
-                              {item.serialNumber}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
-                        item.totalQty === 0
-                          ? "bg-red-50 text-red-600"
-                          : item.totalQty < 5
-                          ? "bg-amber-50 text-amber-600"
-                          : "bg-emerald-50 text-emerald-600"
-                      }`}>
-                        {item.totalQty}
-                      </span>
-                      <button
-                        onClick={() => openEdit(item)}
-                        className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-sky-600 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {Array.from(grouped.entries()).map(([catKey, catItems]) => {
+        const totalInCat = catItems.reduce((a, i) => a + i.totalQty, 0);
+        return (
+          <div key={catKey}>
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="w-4 h-4 text-slate-400" />
+              <span className="text-sm font-semibold text-slate-900">{catLabel(catKey)}</span>
+              <span className="text-xs text-slate-400">{catItems.length} صنف · {totalInCat} قطعة</span>
             </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-            <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-400">لا توجد عناصر في المخزن.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+              {catItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-xl border p-3 sm:p-4 flex flex-col items-center text-center gap-2 min-h-[140px] justify-between ${
+                    item.totalQty === 0
+                      ? "border-red-200 bg-red-50"
+                      : item.totalQty < 5
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-slate-200"
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1 min-w-0 w-full">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                      <Package className="w-5 h-5 text-slate-500" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 leading-tight">{item.name}</span>
+                    {item.consumable && (
+                      <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">استهلاكي</span>
+                    )}
+                    {item.serialNumber && (
+                      <span className="text-[10px] text-sky-600 font-mono truncate max-w-full">{item.serialNumber}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 w-full justify-center">
+                    <span className={`text-lg font-bold ${
+                      item.totalQty === 0 ? "text-red-600" : item.totalQty < 5 ? "text-amber-600" : "text-emerald-600"
+                    }`}>
+                      {item.totalQty}
+                    </span>
+                    <span className="text-[10px] text-slate-400">قطعة</span>
+                  </div>
+                  <div className="flex gap-1 w-full">
+                    <button
+                      onClick={() => openEdit(item)}
+                      className="flex-1 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors"
+                    >
+                      تعديل
+                    </button>
+                    <button
+                      onClick={() => onDeleteItem(item.id)}
+                      className="py-1.5 px-2.5 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })}
+      {filtered.length === 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+          <p className="text-sm text-slate-400">لا توجد عناصر في المخزن.</p>
+        </div>
+      )}
     </div>
   );
 }
