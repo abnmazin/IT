@@ -489,6 +489,9 @@ export default function Home() {
               visitName={selectedVisit.name}
               categories={categories}
               onBack={() => setSelectedBoxId(null)}
+              onUpdateItemQty={(boxId, warehouseItemId, delta) => {
+                handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
+              }}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (
@@ -536,6 +539,9 @@ export default function Home() {
               visitName={selectedVisit.name}
               categories={categories}
               onBack={() => setSelectedBoxId(null)}
+              onUpdateItemQty={(boxId, warehouseItemId, delta) => {
+                handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
+              }}
             />
           )}
           {activeView === "completed-visits" && (
