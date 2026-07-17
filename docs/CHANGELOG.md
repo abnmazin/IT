@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-18] — Mobile Activity Log + Visit Filter Year + Completed Visits Reactivation
+
+### Fixed
+- **ActivityLogView mobile**: Simplified log entries stack vertically, removed separate user/date column, moved all metadata into single row below description
+- **ActivityLogView padding**: Added page padding `p-3 sm:p-6` for consistency
+- **Filter buttons**: More compact with shorter Arabic labels
+
+### Changed
+- **Visit filter dropdown**: Now shows `visit name — year (or hijri date)` to distinguish same visit across years
+- **Visits page**: Completed visits now visible on visits page (not hidden)
+- **Completed visit card**: Purple "إعادة تفعيل" button with RotateCcw icon
+- **handleReactivateVisit**: Resets status to inactive, clears box items, returns warehouse quantities
+
+### Build
+- Build passes: 21.9 kB page / 109 kB first load
+
+---
+
 ## [2026-07-18] — Dashboard Charts + Activity Log Date Picker
 
 ### Added
