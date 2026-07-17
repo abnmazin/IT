@@ -9,6 +9,7 @@ interface DashboardViewProps {
   totalBoxItems: number;
   onNavigateToWarehouse: () => void;
   onNavigateToVisits: () => void;
+  onNavigateToBoxes: () => void;
 }
 
 export default function DashboardView({
@@ -18,6 +19,7 @@ export default function DashboardView({
   totalBoxItems,
   onNavigateToWarehouse,
   onNavigateToVisits,
+  onNavigateToBoxes,
 }: DashboardViewProps) {
   const stats = [
     {
@@ -48,7 +50,7 @@ export default function DashboardView({
       bg: "bg-amber-50",
       textColor: "text-amber-700",
       iconColor: "text-amber-500",
-      onClick: onNavigateToVisits,
+      onClick: onNavigateToBoxes,
     },
   ];
 

@@ -29,6 +29,7 @@ import WarehouseView from "@/components/WarehouseView";
 import VisitsView from "@/components/VisitsView";
 import VisitDetailView from "@/components/VisitDetailView";
 import BoxDetailView from "@/components/BoxDetailView";
+import BoxesView from "@/components/BoxesView";
 import TransfersView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
@@ -446,6 +447,7 @@ export default function Home() {
               totalBoxItems={totalBoxItems}
               onNavigateToWarehouse={() => handleNavigate("warehouse")}
               onNavigateToVisits={() => handleNavigate("visits")}
+              onNavigateToBoxes={() => handleNavigate("boxes")}
             />
           )}
           {activeView === "warehouse" && (
@@ -457,6 +459,31 @@ export default function Home() {
               onEditItem={handleEditWarehouseItem}
               onDeleteItem={handleDeleteWarehouseItem}
               onAddCategory={handleAddCategory}
+            />
+          )}
+          {activeView === "boxes" && !selectedBoxId && (
+            <BoxesView
+              visits={visits}
+              categories={categories}
+              onSelectBox={(visitId, boxId) => {
+                setSelectedVisitId(visitId);
+                setSelectedBoxId(boxId);
+              }}
+            />
+          )}
+          {activeView === "boxes" && selectedVisit && selectedBoxId && selectedBox && (
+            <BoxDetailView
+              box={selectedBox}
+              visitId={selectedVisit.id}
+              visitName={selectedVisit.name}
+              isActive={selectedVisit.status === "active"}
+              warehouseItems={warehouseItems}
+              categories={categories}
+              onBack={() => setSelectedBoxId(null)}
+              onFillBox={handleFillBox}
+              onReturnItems={handleReturnItems}
+              onUpdateItemQty={handleUpdateBoxItemQty}
+              onDeleteItem={handleDeleteBoxItem}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (

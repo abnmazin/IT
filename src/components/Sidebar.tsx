@@ -4,6 +4,7 @@ import { View } from "@/types";
 import {
   LayoutDashboard,
   Warehouse,
+  Package,
   MapPin,
   Truck,
   Users,
@@ -17,6 +18,7 @@ import {
 const navItems: { id: View; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { id: "warehouse", label: "المخزن", icon: Warehouse },
+  { id: "boxes", label: "الصناديق", icon: Package },
   { id: "visits", label: "الزيارات", icon: MapPin },
   { id: "transfers", label: "سجل النقل", icon: Truck },
 ];

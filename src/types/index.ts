@@ -99,6 +99,7 @@ export interface TransferItem {
 export type View =
   | "dashboard"
   | "warehouse"
+  | "boxes"
   | "visits"
   | "transfers"
   | "users"
