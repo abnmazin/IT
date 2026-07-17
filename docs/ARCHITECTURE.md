@@ -75,8 +75,10 @@ RootLayout (layout.tsx) — <html dir="rtl" lang="ar">
         │   ├── Fixed reference qty under item name
         │   └── "لا توجد زيارة مفعلة" message when no active visit
         │
-        ├── VisitsView (inactive/active/collecting only)
+        ├── VisitsView (all statuses including completed)
         │   ├── Visit cards grouped by status
+        │   ├── Inactive with boxes: تعبئة (fill) + تفعيل (activate) buttons
+        │   ├── Shortage warning panel (amber) with item details
         │   ├── Activation dialog (year + hijri date input)
         │   └── "+ إضافة زيارة" button
         │
@@ -134,7 +136,9 @@ page.tsx (State Owner)
 ├── handleAddCategory(key,serial,consumable) → WarehouseView
 ├── handleEditCategory(id, data)       → CategoriesSettings
 ├── handleDeleteCategory(id)           → CategoriesSettings
-├── handleAddVisit(name, date)         → VisitsView
+├── handleReactivateVisit(visitId)         → VisitsView (reactivate completed → inactive)
+├── handleFillBoxesFromTemplate(visitId)   → VisitsView (fill from template with stock check)
+├── handleAddVisit(name, date, hijriDate?) → VisitsView
 ├── handleToggleVisit(id)              → VisitDetailView (activate/deactivate)
 ├── handleCollectVisit(id)             → VisitDetailView (start collecting)
 ├── handleCompleteVisit(id, report)    → CollectionView (finish, move to archive)

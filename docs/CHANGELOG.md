@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-18] — Reactivation Fix + Fill Button + Shortage Check
+
+### Changed
+- **handleReactivateVisit**: Only returns items with `status="returned"` to warehouse; consumed/missing items NOT returned
+- **Template preserved**: Boxes keep item names/categories, qty reset to 0, status cleared for new cycle
+- **Fill from template**: New `handleFillBoxesFromTemplate` checks warehouse stock before filling
+- **Shortage warning**: If warehouse has less than template requires, shows amber warning panel with item names, needed vs available qty
+- **Fill options**: "متابعة بالتناقص" (fill available) or "إلغاء" (cancel)
+- **VisitsView buttons**: Inactive visits with boxes show "تعبئة" (fill) + "تفعيل" (activate); without boxes only "تفعيل"
+
+### Build
+- Build passes: 22.6 kB page / 110 kB first load
+
+---
+
 ## [2026-07-18] — Mobile Activity Log + Visit Filter Year + Completed Visits Reactivation
 
 ### Fixed
