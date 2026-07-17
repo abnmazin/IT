@@ -136,6 +136,49 @@ export default function Home() {
     [warehouseItems, logActivity]
   );
 
+  const handleReactivateVisit = useCallback(
+    (visitId: string) => {
+      setVisits((prev) =>
+        prev.map((v) => {
+          if (v.id !== visitId) return v;
+          const restoredItems: { warehouseItemId: string; qty: number }[] = [];
+          v.boxes.forEach((b) =>
+            b.items.forEach((bi) => {
+              restoredItems.push({ warehouseItemId: bi.warehouseItemId, qty: bi.qty });
+            })
+          );
+          const merged = restoredItems.reduce<{ id: string; qty: number }[]>((acc, r) => {
+            const existing = acc.find((a) => a.id === r.warehouseItemId);
+            if (existing) existing.qty += r.qty;
+            else acc.push({ id: r.warehouseItemId, qty: r.qty });
+            return acc;
+          }, []);
+          return {
+            ...v,
+            status: "inactive" as const,
+            boxes: v.boxes.map((b) => ({ ...b, items: [] })),
+          };
+        })
+      );
+      setWarehouseItems((prev) => {
+        const visit = visits.find((v) => v.id === visitId);
+        if (!visit) return prev;
+        const restored: Record<string, number> = {};
+        visit.boxes.forEach((b) =>
+          b.items.forEach((bi) => {
+            restored[bi.warehouseItemId] = (restored[bi.warehouseItemId] || 0) + bi.qty;
+          })
+        );
+        return prev.map((wh) =>
+          restored[wh.id] ? { ...wh, totalQty: wh.totalQty + restored[wh.id] } : wh
+        );
+      });
+      const visit = visits.find((v) => v.id === visitId);
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit?.name || ""}`, "تم إرجاع العناصر للمخزن", visitId);
+    },
+    [visits, logActivity]
+  );
+
   const handleAddVisit = useCallback(
     (name: string, date: string, hijriDate?: string) => {
       const newVisit: Visit = {
@@ -501,12 +544,13 @@ export default function Home() {
               }}
             />
           )}
-          {activeView === "visits" && !selectedVisitId && (
+           {activeView === "visits" && !selectedVisitId && (
             <VisitsView
               visits={visits}
               onSelectVisit={setSelectedVisitId}
               onAddVisit={handleAddVisit}
               onToggleVisit={handleToggleVisit}
+              onReactivateVisit={handleReactivateVisit}
             />
           )}
            {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (

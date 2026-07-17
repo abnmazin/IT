@@ -20,7 +20,6 @@ import {
   ClipboardList,
   CheckCircle,
   Calendar,
-  Clock,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -71,6 +70,13 @@ const TYPE_COLORS: Record<ActivityType, string> = {
 };
 
 type FilterType = "all" | "date" | "checkout" | "return" | "transfer" | "visit" | "add" | "delete";
+
+function getVisitLabel(v: Visit): string {
+  const parts = [v.name];
+  if (v.year) parts.push(v.year);
+  else if (v.hijriDate) parts.push(v.hijriDate);
+  return parts.join(" — ");
+}
 
 export default function ActivityLogView({ activityLog, visits }: ActivityLogViewProps) {
   const [search, setSearch] = useState("");
@@ -141,36 +147,43 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
 
   const filters: { value: FilterType; label: string; icon: React.ElementType }[] = [
     { value: "all", label: "الكل", icon: Filter },
-    { value: "date", label: "حسباريخ", icon: Calendar },
-    { value: "visit", label: "الزيارات", icon: ClipboardList },
+    { value: "date", label: "تاريخ", icon: Calendar },
+    { value: "visit", label: "زيارات", icon: ClipboardList },
     { value: "checkout", label: "سحب", icon: LogOut },
     { value: "return", label: "إرجاع", icon: LogIn },
     { value: "add", label: "إضافة", icon: Plus },
-    { value: "delete", label: "تعديل/حذف", icon: Trash2 },
+    { value: "delete", label: "تعديل", icon: Trash2 },
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">
-          سجل النشاط ({filtered.length})
-        </h2>
-      </div>
+    <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
+      <h2 className="text-lg font-semibold text-slate-900">
+        سجل النشاط ({filtered.length})
+      </h2>
 
+      {/* Search + filter toggle */}
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="بحث في السجل..."
+            placeholder="بحث..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pr-10 pl-4 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400"
+            className="w-full h-11 pr-9 pl-4 rounded-xl bg-white border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`h-11 px-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 min-w-[44px] justify-center ${
+          className={`h-11 px-3 rounded-xl text-sm font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
             showFilters || filterType !== "all" || filterVisitId !== "All"
               ? "bg-sky-100 text-sky-700"
               : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -185,6 +198,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
         </button>
       </div>
 
+      {/* Filter panel */}
       {showFilters && (
         <div className="bg-white rounded-xl border border-slate-200 p-3 space-y-3">
           <div>
@@ -194,7 +208,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
                 <button
                   key={f.value}
                   onClick={() => { setFilterType(f.value); if (f.value === "date" && !filterDate) setFilterDate(new Date().toISOString().split("T")[0]); }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors min-h-[36px] ${
+                  className={`flex items-center gap-1 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors min-h-[36px] ${
                     filterType === f.value
                       ? "bg-slate-900 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -227,7 +241,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
               >
                 <option value="All">كل الزيارات</option>
                 {visits.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
+                  <option key={v.id} value={v.id}>{getVisitLabel(v)}</option>
                 ))}
               </select>
             </div>
@@ -235,6 +249,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
         </div>
       )}
 
+      {/* Log entries */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
@@ -250,37 +265,31 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
               return (
                 <div
                   key={entry.id}
-                  className="px-3 sm:px-5 py-3 flex items-start gap-3 sm:gap-4 hover:bg-slate-50 transition-colors"
+                  className="px-3 py-3 flex items-start gap-2.5 sm:px-5 sm:gap-4 hover:bg-slate-50 transition-colors"
                 >
                   <div
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg ${colorClass} flex items-center justify-center shrink-0 mt-0.5`}
+                    className={`w-8 h-8 rounded-lg ${colorClass} flex items-center justify-center shrink-0 mt-0.5`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-slate-800 truncate">
-                        {entry.description}
-                      </p>
-                      <span
-                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${colorClass}`}
-                      >
-                        {ACTIVITY_TYPE_LABELS[entry.type]}
-                      </span>
-                    </div>
+                    <p className="text-sm font-medium text-slate-800 truncate">
+                      {entry.description}
+                    </p>
                     {entry.details && (
                       <p className="text-xs text-slate-400 mt-0.5 truncate">
                         {entry.details}
                       </p>
                     )}
-                  </div>
-                  <div className="text-left shrink-0">
-                    <p className="text-xs font-medium text-slate-600 truncate">
-                      {entry.userName}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                      {date} · {time}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${colorClass}`}>
+                        {ACTIVITY_TYPE_LABELS[entry.type]}
+                      </span>
+                      <span className="text-[10px] text-slate-400">{entry.userName}</span>
+                      <span className="text-[10px] text-slate-300" dir="ltr">
+                        {date} · {time}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
