@@ -5,12 +5,12 @@
 **Project Name:** IT Inventory Dashboard  
 **Tagline:** Frictionless IT equipment management for high-pressure work environments.
 
-A single-page web application designed for IT teams to manage physical equipment boxes across multiple sites. The core UX philosophy is **minimal clicks** — checking items in and out must be instant, with no complex forms.
+A single-page web application designed for IT teams to manage physical equipment for events/visits. The core UX philosophy is **minimal clicks** — filling boxes and returning items must be instant, with no complex forms.
 
 ## Target Users
 
-- IT technicians managing equipment across office floors and remote sites
-- Warehouse / logistics staff tracking box contents during relocations
+- IT technicians managing equipment across events and visits
+- Warehouse / logistics staff tracking item deployment and return
 - Site managers needing quick visibility into equipment availability
 
 ## Tech Stack
@@ -22,37 +22,53 @@ A single-page web application designed for IT teams to manage physical equipment
 | Styling | Tailwind CSS 3.4 |
 | Icons | lucide-react |
 | Language | TypeScript 5 |
-| State | React hooks (useState, useCallback) |
+| State | React hooks (useState, useCallback, useMemo) |
 
 ## Core Functional Requirements
 
-### 1. Box Management
-- Grid view of numbered equipment boxes with color-coded status (full / partial / empty / relocating)
-- Each box contains categorized inventory items (Laptops, Keyboards, Cables, etc.)
-- Status auto-calculated from item quantities
+### 1. Warehouse Management
+- Grid card layout of all warehouse items with consumable/serial badges
+- Search + category filter for quick item lookup
+- Add/edit/delete items inline (all fields optional)
+- Add/edit/delete categories with consumable and serial-tracked flags
+- Serial-tracked items: Laptop, Monitor, Printer, Docking Station
+- Consumable items: Cable, Label (don't need return)
 
-### 2. Quick Check-In / Check-Out
-- Inside any box, items display `[-] qty [+]` inline controls
-- Pressing `-` instantly checks out one unit (moves it to a visual "Checked Out" section)
-- Pressing `+` on a checked-out item instantly returns it
-- No forms, no confirmations — one tap does the job
+### 2. Visit System (Template-Based)
+- Visits are templates that can be reactivated multiple times
+- **4-state lifecycle**: inactive → active → collecting → completed
+- **Activation**: Confirmation dialog with year + hijri date input
+- **Filling**: Pull items from warehouse into visit boxes (qty decreases)
+- **Collecting**: Return items from boxes back to warehouse (partial returns supported)
+- **Completed**: Moves to archive, template stays for re-use
+- Consumables default to 0 on return; non-consumables default to full qty
 
-### 3. Global Search
-- Header search bar filters boxes and items in real-time
-- Searches across box labels, item names, categories, and sites
+### 3. Boxes Page (Display-Only)
+- Shows only active visit's boxes
+- Fixed reference qty under item name
+- +/- controls adjustable between 0 and reference qty
+- No fill/return/delete (editing done from visits page)
+- "لا توجد زيارة مفعلة" message when no active visit
 
 ### 4. Dashboard
-- Summary stat cards: Total Boxes, Ready Boxes, Checked-Out Items, Low Stock Alerts
-- Active checkouts list
-- Box health progress bars
+- Summary stat cards: warehouse items, items in visits, active visits
+- Stacked bar chart comparing completed visits (returned/consumed/missing)
+- Recent activity feed (last 5 entries)
 
-### 5. Relocations
-- Track box movements between sites (pending / in-transit / completed)
-- Visual route display with from/to sites
+### 5. Completed Visits Archive
+- Expandable cards per completed visit with full detail
+- Per-box breakdown showing returned/consumed/missing items
+- Reset button to reactivate template
 
-### 6. Full Inventory Table
-- Flat table view of every item across all boxes
-- Filterable via global search
+### 6. Visit Reports
+- Full comparison report per box with statuses
+- Summary: total deployed/returned/consumed/missing
+
+### 7. Activity Log
+- Date picker filter (any day)
+- Type filters: Today/Visits/Checkout/Return/Add/Edit/Delete
+- Visit filter: all visits (active + completed)
+- Per-visit activity log in VisitDetailView
 
 ## UX Principles
 
@@ -60,4 +76,6 @@ A single-page web application designed for IT teams to manage physical equipment
 - **Instant feedback** — Quantities update immediately, no loading states
 - **Visual status indicators** — Color coding at every level (boxes, items, badges)
 - **Arabic-first RTL layout** — Full right-to-left support for Arabic-speaking users
-- **Mobile-friendly** — Responsive layout with hamburger navigation on small screens
+- **Mobile-friendly** — Responsive layout with hamburger navigation, 40-44px touch targets
+- **All fields optional** — No required fields when adding items
+- **Consumable awareness** — Items flagged as consumable don't require return tracking

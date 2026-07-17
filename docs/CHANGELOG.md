@@ -2,39 +2,186 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-07-16] — MAJOR: Complete System Restructuring — Warehouse + Visits
+---
+
+## [2026-07-18] — Dashboard Charts + Activity Log Date Picker
+
+### Added
+- **Dashboard visits comparison chart**: Stacked bar chart comparing completed visits (returned/consumed/missing items)
+- **Dashboard recent activity feed**: Last 5 activity log entries on dashboard
+- **Activity log date picker**: "Today" filter replaced with full date picker (select any day)
+- **Activity log visit filter**: Now includes ALL visits (active + completed), not just completed
+- **DashboardView receives `visits` + `activityLog` props**
+
+### Changed
+- ActivityLogView: `FilterType` changed from `"today"` to `"date"` with `filterDate` state
+- Visit dropdown in activity log shows all visits regardless of status
+- DashboardView: Added stacked bar chart with color legend (green=returned, amber=consumed, red=missing)
+- DashboardView: Recent activity list shows last 5 entries with type badge and timestamp
+
+### Build
+- Build passes: 21.6 kB page / 109 kB first load
+
+---
+
+## [2026-07-18] — Per-Visit Activity Log + Global Log Filters + Mobile Fixes
+
+### Added
+- **Per-visit activity log**: VisitDetailView has expandable activity log section filtered by `visitId`
+- **Global activity log filters**: Filter panel with type filters (Today/Visits/Checkout/Return/Add/Edit/Delete)
+- **Completed visit selector** in activity log filter panel
+- **`visitId` on ActivityLogEntry**: All handlers (handleToggleVisit, handleCollectVisit, handleFillBox, handleReturnItems, handleAddVisit) pass `visitId` to `logActivity`
+- **Visit type `year` field**: Optional year input on activation confirmation dialog
+
+### Changed
+- Activity log filter panel: type buttons + completed visit dropdown selector
+- All activity handlers updated to log `visitId` for per-visit filtering
+
+---
+
+## [2026-07-18] — Mobile Responsiveness Across All Pages
+
+### Fixed
+- **All pages**: +/- buttons 40-44px touch targets, action buttons 44px min-h, close buttons 36px
+- **Search clear buttons**: Padded for touch targets
+- **Bottom action buttons**: Stack vertically on mobile (`flex-col sm:flex-row`)
+- **Empty states**: Responsive padding (`p-4 sm:p-8`)
+- **CollectionView**: Per-item +/- controls fully responsive
+- **BoxesView**: Empty state and active visit display responsive
+- **VisitDetailView**: Box cards, activation dialog, collecting mode all responsive
+- **WarehouseView**: Grid cards, search bar, category filter responsive
+
+---
+
+## [2026-07-18] — Boxes Page + Display-Only Mode
+
+### Added
+- **Boxes page** (`boxes` view): Dedicated page showing only active visit's boxes
+- **Display-only BoxDetailView**: Read-only mode for boxes page with +/- controls
+  - Fixed reference qty displayed under item name
+  - +/- buttons adjustable between 0 and reference qty
+  - No fill/return/delete buttons (editing done from visits page)
+- **"لا توجد زيارة مفعلة"** message when no active visit exists
+
+### Changed
+- BoxesView: Now shows only active visit boxes, not all visits
+- BoxDetailView: Dual mode (display-only for boxes page, full edit for visit detail)
+
+---
+
+## [2026-07-18] — Warehouse Grid Card Layout
+
+### Added
+- **Warehouse grid card layout**: Items displayed as square cards in responsive grid (2-5 columns)
+- **Consumable badge** on cards for consumable items
+- **Serial number badge** on cards for serial-tracked items
+- **Quantity display** on cards
+- **Edit/Delete buttons** on each card
+- **Add Category button**: Inline form in WarehouseView header (violet color)
+- **Auto-select category**: When category filter is active, add item form pre-selects that category
+
+### Changed
+- WarehouseView completely rewritten from list to grid card layout
+- Grid responsive: `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5`
+- Each card: icon + name + serial + qty + consumable badge + edit/delete
+
+---
+
+## [2026-07-18] — Completed Visits Archive + Visit Reports
+
+### Added
+- **CompletedVisitsView** (archive page): Expandable cards for all completed visits with full detail
+- **VisitReport**: Full comparison report per box with statuses (returned/consumed/missing)
+- **Sidebar navigation**: "الزيارات المكتملة" (completed-visits) page
+- **Partial returns**: CollectionView supports returning partial quantities per item
+- **Qty 0 support**: Allow pulling 0 items from warehouse
+
+### Changed
+- Visits page now only shows inactive/active/collecting visits (completed go to archive)
+- TransfersView renamed to CompletedVisitsView (archive)
+
+---
+
+## [2026-07-18] — Consumable Items + Collection View Redesign
+
+### Added
+- **Consumable system**: `consumable` property on Category, WarehouseItem, BoxItem types
+- **Visit lifecycle (4 states)**: inactive → active → collecting → completed
+- **Activation confirmation dialog** with year + hijri date input
+- **CollectionView redesign**: Per-box/category view toggle, +/- controls for partial return
+  - Consumables default to 0 (not returned)
+  - Non-consumables default to full qty
+  - No "missing" button (obvious from red indicator)
+
+### Changed
+- Categories: Added `consumable` boolean field
+- WarehouseItem: Added `consumable` boolean field
+- BoxItem: Added `consumable`, `returnedQty`, `status` fields
+- Visit: Added `hijriDate`, `year` fields
+- VisitReport: Full comparison with per-box breakdown
+
+---
+
+## [2026-07-18] — Fill Modal Redesign + Category Management
+
+### Added
+- **Fill modal redesign**: Search bar + category filter dropdown + collapsible accordion groups
+- **Add Category button**: In WarehouseView header, violet color, inline form with name + serialTracked + consumable checkboxes
+- **Category CRUD**: Add/edit/delete categories from WarehouseView
+
+### Changed
+- Fill modal: Groups items by category in collapsible accordions
+- Fill modal: Search filters across all items
+- Fill modal: Category dropdown filters items
+
+---
+
+## [2026-07-17] — BoxDetailView Full Page View
+
+### Added
+- **BoxDetailView**: Full page view for box items with +/- controls
+- **Visit cards as grid**: Visits displayed as compact card grid
+
+### Changed
+- Visit cards: Grid layout with status indicators
+- Box cards: Display visit info and box contents
+
+---
+
+## [2026-07-17] — Major Restructure: Warehouse + Visits System
 
 ### New Data Model
 - `WarehouseItem`, `Visit` (inactive/active/completed), `Box`, `BoxItem`
 - Removed: `Site`, `Location`, `InventoryItem` (old models)
 
-### New Pages (7 in Sidebar)
-1. لوحة التحكم — stats dashboard
-2. المخزن — central inventory CRUD
-3. الزيارات — visits list + detail + fill/return boxes
-4. سجل النقل — transfer log
-5. المستخدمين — user management
-6. الفئات — category management
-7. سجل النشاط — activity log
+### New Pages (8 in Sidebar)
+1. لوحة التحكم — stats dashboard with charts
+2. المخزن — central inventory grid cards
+3. الصناديق — active visit boxes (display-only)
+4. الزيارات — visits list + detail + fill/return boxes
+5. الزيارات المكتملة — completed visits archive
+6. المستخدمين — user management
+7. الفئات — category management
+8. سجل النشاط — activity log with filters
 
 ### Visit Workflow
 - Activate → fill boxes from warehouse (qty decreases)
-- Deactivate → return items to warehouse (qty restored)
-- Boxes remain as record
+- Collecting → return items to warehouse (qty restored)
+- Completed → moves to archive, template stays for reactivation
 
 ### Deleted Files
 - LocationsView, LocationCard, LocationDetailView, AddLocationModal
 - InventoryView, AddItemModal, TransferModal, SitesSettings
 
-### Build: 15.3 kB / 102 kB
+### Build: 21.6 kB / 109 kB
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+---
 
 ## [2026-07-16] — Settings Split into Sidebar Navigation
 
 ### Changed
 - Sites, Categories, Activity Log moved from SettingsView tabs to separate Sidebar nav items
-- Sidebar bottom section: المستخدمين (Users), المواقع (Sites), الفئات (Categories), سجل النشاط (Activity Log)
+- Sidebar bottom section: المستخدمين (Users), الفئات (Categories), سجل النشاط (Activity Log)
 - SettingsView simplified to only UsersSettings (removed tabs, sites, categories, activity props)
 - Added 3 new View types: `sites-settings`, `categories-settings`, `activity-log`
 - Each new view has its own page header + standalone component in page.tsx
