@@ -1,109 +1,23 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Box, BoxItem, WarehouseItem, Category, ItemCategory } from "@/types";
-import { ArrowRight, Plus, Package, Tag, RotateCcw, Trash2, X, Minus, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Box, Category } from "@/types";
+import { ArrowRight, Package, Tag, Minus, Plus } from "lucide-react";
 
 interface BoxDetailViewProps {
   box: Box;
-  visitId: string;
   visitName: string;
-  isActive: boolean;
-  warehouseItems: WarehouseItem[];
   categories: Category[];
   onBack: () => void;
-  onFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
-  onReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
-  onUpdateItemQty: (visitId: string, boxId: string, warehouseItemId: string, delta: number) => void;
-  onDeleteItem: (visitId: string, boxId: string, warehouseItemId: string) => void;
 }
 
 export default function BoxDetailView({
   box,
-  visitId,
   visitName,
-  isActive,
-  warehouseItems,
   categories,
   onBack,
-  onFillBox,
-  onReturnItems,
-  onUpdateItemQty,
-  onDeleteItem,
 }: BoxDetailViewProps) {
-  const [showFill, setShowFill] = useState(false);
-  const [showReturn, setShowReturn] = useState(false);
-  const [fillItems, setFillItems] = useState<{ warehouseItemId: string; qty: number }[]>([]);
-  const [returnItems, setReturnItems] = useState<{ warehouseItemId: string; qty: number }[]>([]);
-  const [fillSearch, setFillSearch] = useState("");
-  const [fillCategory, setFillCategory] = useState<ItemCategory | "All">("All");
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-
   const totalQty = box.items.reduce((a, i) => a + i.qty, 0);
-
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
-
-  const availableWarehouse = useMemo(
-    () => warehouseItems.filter((w) => w.totalQty > 0),
-    [warehouseItems]
-  );
-
-  const filteredFillItems = useMemo(() => {
-    let items = availableWarehouse;
-    if (fillCategory !== "All") {
-      items = items.filter((w) => w.category === fillCategory);
-    }
-    if (fillSearch.trim()) {
-      const q = fillSearch.trim().toLowerCase();
-      items = items.filter(
-        (w) => w.name.toLowerCase().includes(q) || (w.serialNumber && w.serialNumber.toLowerCase().includes(q))
-      );
-    }
-    return items;
-  }, [availableWarehouse, fillCategory, fillSearch]);
-
-  const groupedFillItems = useMemo(() => {
-    const groups: Record<string, WarehouseItem[]> = {};
-    for (const item of filteredFillItems) {
-      if (!groups[item.category]) groups[item.category] = [];
-      groups[item.category].push(item);
-    }
-    return groups;
-  }, [filteredFillItems]);
-
-  const toggleCategory = (cat: string) => {
-    setExpandedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
-  };
-
-  const handleFill = () => {
-    const items: BoxItem[] = fillItems
-      .filter((fi) => fi.qty > 0)
-      .map((fi) => {
-        const whItem = warehouseItems.find((w) => w.id === fi.warehouseItemId);
-        return {
-          warehouseItemId: fi.warehouseItemId,
-          name: whItem?.name || "",
-          category: whItem?.category || "Cable",
-          serialNumber: whItem?.serialNumber,
-          qty: fi.qty,
-          consumable: whItem?.consumable ?? false,
-        };
-      });
-    if (items.length > 0) {
-      onFillBox(visitId, box.id, items);
-    }
-    setShowFill(false);
-    setFillItems([]);
-  };
-
-  const handleReturn = () => {
-    const returned = returnItems.filter((ri) => ri.qty > 0);
-    if (returned.length > 0) {
-      onReturnItems(visitId, box.id, returned);
-    }
-    setShowReturn(false);
-    setReturnItems([]);
-  };
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -120,245 +34,20 @@ export default function BoxDetailView({
             {visitName} · {totalQty} قطعة · {box.items.length} صنف
           </p>
         </div>
-        {isActive && (
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => { setShowFill(true); setShowReturn(false); setFillItems([]); setFillSearch(""); setFillCategory("All"); setExpandedCategories({}); }}
-              className="flex items-center gap-2 px-3 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">تعبئة</span>
-            </button>
-            <button
-              onClick={() => { setShowReturn(true); setShowFill(false); setReturnItems(box.items.map((i) => ({ warehouseItemId: i.warehouseItemId, qty: 0 }))); }}
-              className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span className="hidden sm:inline">إرجاع</span>
-            </button>
-          </div>
-        )}
       </div>
-
-      {showFill && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">
-              تعبئة {box.name} من المخزن
-            </h3>
-            <button onClick={() => setShowFill(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
-              <X className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="بحث بالاسم أو السيريال..."
-                value={fillSearch}
-                onChange={(e) => setFillSearch(e.target.value)}
-                className="w-full pl-3 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300"
-              />
-              {fillSearch && (
-                <button onClick={() => setFillSearch("")} className="absolute left-3 top-1/2 -translate-y-1/2">
-                  <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
-                </button>
-              )}
-            </div>
-            <select
-              value={fillCategory}
-              onChange={(e) => setFillCategory(e.target.value as ItemCategory | "All")}
-              className="py-2.5 px-3 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 bg-white"
-            >
-              <option value="All">كل الفئات</option>
-              {categories.map((c) => (
-                <option key={c.key} value={c.key}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {Object.keys(groupedFillItems).length === 0 ? (
-              <div className="py-8 text-center">
-                <Package className="w-6 h-6 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">لا توجد عناصر متاحة</p>
-              </div>
-            ) : (
-              Object.entries(groupedFillItems).map(([cat, items]) => {
-                const isExpanded = expandedCategories[cat] !== false;
-                return (
-                  <div key={cat} className="border border-slate-100 rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => toggleCategory(cat)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-700">{catLabel(cat)}</span>
-                        <span className="text-[11px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">{items.length}</span>
-                      </div>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                    </button>
-                    {isExpanded && (
-                      <div className="divide-y divide-slate-50">
-                        {items.map((whItem) => {
-                          const existing = fillItems.find((f) => f.warehouseItemId === whItem.id);
-                          const currentFill = existing?.qty || 0;
-                          return (
-                            <div key={whItem.id} className="flex items-center justify-between gap-3 py-2 px-3">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Package className="w-4 h-4 text-slate-400 shrink-0" />
-                                <div className="min-w-0">
-                                  <span className="text-sm font-medium text-slate-700 truncate block">{whItem.name}</span>
-                                  <span className="text-[11px] text-slate-400">متوفر: {whItem.totalQty}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <button
-                                  onClick={() => {
-                                    if (currentFill > 0) {
-                                      setFillItems((prev) =>
-                                        prev.map((f) => f.warehouseItemId === whItem.id ? { ...f, qty: f.qty - 1 } : f)
-                                      );
-                                    }
-                                  }}
-                                  className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300"
-                                >
-                                  <Minus className="w-3.5 h-3.5" />
-                                </button>
-                                <span className="w-8 text-center text-sm font-bold text-slate-900">{currentFill}</span>
-                                <button
-                                  onClick={() => {
-                                    if (currentFill < whItem.totalQty) {
-                                      setFillItems((prev) => {
-                                        const found = prev.find((f) => f.warehouseItemId === whItem.id);
-                                        if (found) {
-                                          return prev.map((f) =>
-                                            f.warehouseItemId === whItem.id ? { ...f, qty: f.qty + 1 } : f
-                                          );
-                                        }
-                                        return [...prev, { warehouseItemId: whItem.id, qty: 1 }];
-                                      });
-                                    }
-                                  }}
-                                  className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 hover:bg-sky-200"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleFill} className="px-4 py-2.5 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700">
-              تعبئة الصندوق
-            </button>
-            <button onClick={() => setShowFill(false)} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
-              إلغاء
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showReturn && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-900">
-              إرجاع مواد من {box.name} للمخزن
-            </h3>
-            <button onClick={() => setShowReturn(false)} className="p-1.5 rounded-lg hover:bg-slate-100">
-              <X className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
-          <div className="max-h-[400px] overflow-y-auto space-y-2">
-            {box.items.map((boxItem) => {
-              const ri = returnItems.find((r) => r.warehouseItemId === boxItem.warehouseItemId);
-              const returnQty = ri?.qty || 0;
-              return (
-                <div key={boxItem.warehouseItemId} className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg bg-slate-50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Package className="w-4 h-4 text-slate-400 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-sm font-medium text-slate-700 truncate block">{boxItem.name}</span>
-                      <span className="text-[11px] text-slate-400">
-                        في الصندوق: {boxItem.qty} · مُرجع: {returnQty}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        if (returnQty > 0) {
-                          setReturnItems((prev) =>
-                            prev.map((r) =>
-                              r.warehouseItemId === boxItem.warehouseItemId ? { ...r, qty: r.qty - 1 } : r
-                            )
-                          );
-                        }
-                      }}
-                      className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-8 text-center text-sm font-bold text-slate-900">{returnQty}</span>
-                    <button
-                      onClick={() => {
-                        if (returnQty < boxItem.qty) {
-                          setReturnItems((prev) =>
-                            prev.map((r) =>
-                              r.warehouseItemId === boxItem.warehouseItemId ? { ...r, qty: r.qty + 1 } : r
-                            )
-                          );
-                        }
-                      }}
-                      className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleReturn} className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
-              إرجاع للمخزن
-            </button>
-            <button onClick={() => setShowReturn(false)} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">
-              إلغاء
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {box.items.length === 0 ? (
           <div className="py-16 text-center">
             <Package className="w-8 h-8 text-slate-300 mx-auto mb-3" />
             <p className="text-sm text-slate-400">الصندوق فارغ</p>
-            {isActive && (
-              <button
-                onClick={() => { setShowFill(true); setFillItems([]); setFillSearch(""); setFillCategory("All"); setExpandedCategories({}); }}
-                className="mt-3 px-4 py-2 bg-sky-50 text-sky-600 rounded-lg text-sm font-medium hover:bg-sky-100 transition-colors"
-              >
-                تعبئة من المخزن
-              </button>
-            )}
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
             {box.items.map((item) => (
               <div
                 key={item.warehouseItemId}
-                className="flex items-center justify-between gap-3 px-3 sm:px-5 py-3 hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between gap-3 px-3 sm:px-5 py-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
@@ -377,34 +66,14 @@ export default function BoxDetailView({
                     <span className="text-[11px] text-slate-400">{catLabel(item.category)}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {isActive ? (
-                    <>
-                      <button
-                        onClick={() => onUpdateItemQty(visitId, box.id, item.warehouseItemId, -1)}
-                        className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 transition-colors"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="w-8 text-center text-sm font-bold text-slate-900">{item.qty}</span>
-                      <button
-                        onClick={() => onUpdateItemQty(visitId, box.id, item.warehouseItemId, 1)}
-                        className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sky-600 hover:bg-sky-200 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteItem(visitId, box.id, item.warehouseItemId)}
-                        className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
-                      {item.qty}
-                    </span>
-                  )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-bold text-slate-900">{item.qty}</span>
+                  <button className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}

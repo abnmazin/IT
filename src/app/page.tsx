@@ -483,19 +483,12 @@ export default function Home() {
               }}
             />
           )}
-          {activeView === "boxes" && selectedVisit && selectedBoxId && selectedBox && (
+           {activeView === "boxes" && selectedVisit && selectedBoxId && selectedBox && (
             <BoxDetailView
               box={selectedBox}
-              visitId={selectedVisit.id}
               visitName={selectedVisit.name}
-              isActive={selectedVisit.status === "active"}
-              warehouseItems={warehouseItems}
               categories={categories}
               onBack={() => setSelectedBoxId(null)}
-              onFillBox={handleFillBox}
-              onReturnItems={handleReturnItems}
-              onUpdateItemQty={handleUpdateBoxItemQty}
-              onDeleteItem={handleDeleteBoxItem}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (
@@ -537,19 +530,12 @@ export default function Home() {
               onBack={() => setSelectedVisitId(null)}
             />
           )}
-          {activeView === "visits" && selectedVisit && selectedBoxId && selectedBox && (
+           {activeView === "visits" && selectedVisit && selectedBoxId && selectedBox && (
             <BoxDetailView
               box={selectedBox}
-              visitId={selectedVisit.id}
               visitName={selectedVisit.name}
-              isActive={selectedVisit.status === "active"}
-              warehouseItems={warehouseItems}
               categories={categories}
               onBack={() => setSelectedBoxId(null)}
-              onFillBox={handleFillBox}
-              onReturnItems={handleReturnItems}
-              onUpdateItemQty={handleUpdateBoxItemQty}
-              onDeleteItem={handleDeleteBoxItem}
             />
           )}
           {activeView === "completed-visits" && (
