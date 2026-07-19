@@ -22,7 +22,8 @@ import ActivityLogView from "@/components/ActivityLogView";
 import DeveloperSettings from "@/components/DeveloperSettings";
 
 const ROLE_ALLOWED_VIEWS: Record<UserRole, View[]> = {
-  admin: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log", "developer"],
+  admin: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log"],
+  developer: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log", "developer"],
   member: ["dashboard", "warehouse", "boxes", "visits", "completed-visits"],
   viewer: ["warehouse", "boxes"],
 };
@@ -55,7 +56,6 @@ export default function Home() {
   );
 
   const isViewer = user?.role === "viewer";
-  const isDeveloper = user?.name === "abnmazin" && user?.role === "admin";
 
   // Sync auth user to DataContext for activity logging
   useEffect(() => {
@@ -107,7 +107,6 @@ export default function Home() {
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
         userRole={user.role}
-        isDeveloper={isDeveloper}
       />
 
       <div
@@ -272,7 +271,7 @@ export default function Home() {
               <ActivityLogView activityLog={data.activityLog} visits={data.visits} />
             </div>
           )}
-          {activeView === "developer" && isDeveloper && (
+          {activeView === "developer" && (
             <DeveloperSettings
               onBulkDeleteWarehouseItems={data.handleBulkDeleteWarehouseItems}
               warehouseItemCount={data.warehouseItems.length}

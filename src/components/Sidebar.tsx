@@ -17,17 +17,17 @@ import {
 } from "lucide-react";
 
 const allNavItems: { id: View; label: string; icon: React.ElementType; roles: UserRole[] }[] = [
-  { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard, roles: ["admin", "member"] },
-  { id: "warehouse", label: "المخزن", icon: Warehouse, roles: ["admin", "member", "viewer"] },
-  { id: "boxes", label: "الصناديق", icon: Package, roles: ["admin", "member", "viewer"] },
-  { id: "visits", label: "الزيارات", icon: MapPin, roles: ["admin", "member"] },
-  { id: "completed-visits", label: "الزيارات المكتملة", icon: CheckCircle, roles: ["admin", "member"] },
+  { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard, roles: ["admin", "developer", "member"] },
+  { id: "warehouse", label: "المخزن", icon: Warehouse, roles: ["admin", "developer", "member", "viewer"] },
+  { id: "boxes", label: "الصناديق", icon: Package, roles: ["admin", "developer", "member", "viewer"] },
+  { id: "visits", label: "الزيارات", icon: MapPin, roles: ["admin", "developer", "member"] },
+  { id: "completed-visits", label: "الزيارات المكتملة", icon: CheckCircle, roles: ["admin", "developer", "member"] },
 ];
 
 const allBottomItems: { id: View; label: string; icon: React.ElementType; roles: UserRole[] }[] = [
-  { id: "users", label: "المستخدمين", icon: Users, roles: ["admin"] },
-  { id: "categories-settings", label: "الفئات", icon: Tag, roles: ["admin"] },
-  { id: "activity-log", label: "سجل النشاط", icon: ClipboardList, roles: ["admin"] },
+  { id: "users", label: "المستخدمين", icon: Users, roles: ["admin", "developer"] },
+  { id: "categories-settings", label: "الفئات", icon: Tag, roles: ["admin", "developer"] },
+  { id: "activity-log", label: "سجل النشاط", icon: ClipboardList, roles: ["admin", "developer"] },
 ];
 
 interface SidebarProps {
@@ -38,7 +38,6 @@ interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
   userRole: UserRole;
-  isDeveloper?: boolean;
 }
 
 export default function Sidebar({
@@ -49,7 +48,6 @@ export default function Sidebar({
   mobileOpen,
   onMobileClose,
   userRole,
-  isDeveloper = false,
 }: SidebarProps) {
   const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
   const bottomItems = allBottomItems.filter((item) => item.roles.includes(userRole));
@@ -141,7 +139,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {isDeveloper && (
+        {userRole === "developer" && (
           <div className="px-2 pb-1 space-y-1 border-t border-slate-700/50 pt-2">
             <button
               onClick={() => onNavigate("developer")}

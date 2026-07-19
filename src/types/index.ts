@@ -115,12 +115,13 @@ export type View =
   | "activity-log"
   | "developer";
 
-export type UserRole = "admin" | "member" | "viewer";
+export type UserRole = "admin" | "member" | "viewer" | "developer";
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   admin: "ادمن",
   member: "عضو",
   viewer: "مشاهد",
+  developer: "المطور",
 };
 
 export interface User {

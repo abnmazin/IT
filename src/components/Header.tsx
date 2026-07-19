@@ -6,6 +6,7 @@ import { User, UserRole, USER_ROLE_LABELS, ActivityLogEntry, ACTIVITY_TYPE_LABEL
 
 const ROLE_BADGE: Record<UserRole, string> = {
   admin: "bg-purple-100 text-purple-700",
+  developer: "bg-amber-100 text-amber-700",
   member: "bg-sky-100 text-sky-700",
   viewer: "bg-slate-100 text-slate-600",
 };
