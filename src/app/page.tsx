@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { View, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
-import { resetFirestore } from "@/lib/firestore";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import LoginPage from "@/components/LoginPage";
@@ -61,14 +60,6 @@ export default function Home() {
     data.setAuthUser(user);
     return () => data.setAuthUser(null);
   }, [user]);
-
-  // Expose resetFirestore on window for console use
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__resetFirestore = resetFirestore;
-    }
-  }, []);
 
   const handleNavigate = useCallback(
     (view: View) => {
