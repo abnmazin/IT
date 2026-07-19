@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     (username: string, pin: string): boolean => {
       const found = users.find(
-        (u) => u.name === username && u.pin === pin && u.active
+        (u) => u.name.toLowerCase() === username.toLowerCase().trim() && u.pin === pin && u.active
       );
       if (found) {
         setUser(found);

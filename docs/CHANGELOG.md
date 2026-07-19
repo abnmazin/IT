@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-20] — Bug Fixes & UX Improvements
+
+### Fixed
+- **BoxesView.tsx**: Removed duplicate `activeVisit2` variable (unused)
+- **DataContext.tsx**: Fixed wrong activity type when deleting warehouse items (`"add_item"` → `"delete_item"`)
+- **VisitDetailView.tsx**: Activation confirmation now saves year and hijri date to Firestore via new `handleActivateVisit` callback
+- **Completed visits**: Removed "إعادة" button from completed visit detail view (read-only mode)
+- **Bulk delete logging**: Changed from individual notifications (one per item) to single grouped notification with count (e.g., "حذف 6 أصناف من المخزن: ... و 5 أخرى")
+
+### Added
+- **BoxDetailView.tsx**: New "إضافة صنف" button inside box detail page (accessible from Visits page only, not from Boxes page). Includes search bar, category filter, and list of available warehouse items for adding to the box
+- **DataContext.tsx**: New `handleActivateVisit(visitId, year, hijriDate)` function that activates a visit with year/hijri metadata
+- **BoxDetailView.tsx**: New optional props `onAddItemToBox` and `visitId` for adding items from warehouse to box
+
+### Changed
+- **page.tsx**: Passes `onActivateVisit` to VisitDetailView, passes `onAddItemToBox` + `visitId` to BoxDetailView (only from Visits context, not Boxes)
+- **BoxDetailView.tsx**: Now accepts optional `onAddItemToBox` and `visitId` props; conditionally shows "إضافة صنف" button when these props are provided
+
+---
+
 ## [2026-07-19] — Firebase Integration
 
 ### Added

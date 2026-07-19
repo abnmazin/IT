@@ -21,7 +21,7 @@ D:\Programing\Website\IT\
 │   │   ├── DashboardView.tsx     # Stats + visits comparison chart
 │   │   ├── WarehouseView.tsx     # Grid cards: warehouse items + category management
 │   │   ├── BoxesView.tsx         # Active visit boxes (display-only)
-│   │   ├── BoxDetailView.tsx     # Display-only box view (boxes page) with +/- controls
+│   │   ├── BoxDetailView.tsx     # Box view with +/- controls + optional "إضافة صنف" button (from visits page)
 │   │   ├── VisitsView.tsx        # Visit cards grouped by status
 │   │   ├── VisitDetailView.tsx   # Visit detail: boxes, activation, collecting, activity log
 │   │   ├── CollectionView.tsx    # Partial return controls per box/category
