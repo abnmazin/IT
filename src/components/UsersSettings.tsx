@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, X, UserCheck, UserX } from "lucide-react";
 
 interface UsersSettingsProps {
   users: User[];
+  currentUserRole: User["role"];
   onAdd: (name: string, role: UserRole, pin: string) => void;
   onEdit: (id: string, name: string, role: UserRole, pin: string) => void;
   onDelete: (id: string) => void;
@@ -21,11 +22,15 @@ const ROLE_BADGE: Record<UserRole, string> = {
 
 export default function UsersSettings({
   users,
+  currentUserRole,
   onAdd,
   onEdit,
   onDelete,
   onToggle,
 }: UsersSettingsProps) {
+  const availableRoles = (Object.entries(USER_ROLE_LABELS) as [UserRole, string][]).filter(
+    ([value]) => currentUserRole === "developer" || value !== "developer"
+  );
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [name, setName] = useState("");
@@ -224,8 +229,8 @@ export default function UsersSettings({
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">الدور *</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(Object.entries(USER_ROLE_LABELS) as [UserRole, string][]).map(([value, label]) => (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {availableRoles.map(([value, label]) => (
                     <button
                       key={value}
                       type="button"

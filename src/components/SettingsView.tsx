@@ -5,6 +5,7 @@ import UsersSettings from "./UsersSettings";
 
 interface SettingsViewProps {
   users: User[];
+  currentUserRole: User["role"];
   onAddUser: (name: string, role: User["role"], pin: string) => void;
   onEditUser: (id: string, name: string, role: User["role"], pin: string) => void;
   onDeleteUser: (id: string) => void;
@@ -13,6 +14,7 @@ interface SettingsViewProps {
 
 export default function SettingsView({
   users,
+  currentUserRole,
   onAddUser,
   onEditUser,
   onDeleteUser,
@@ -29,6 +31,7 @@ export default function SettingsView({
 
       <UsersSettings
         users={users}
+        currentUserRole={currentUserRole}
         onAdd={onAddUser}
         onEdit={onEditUser}
         onDelete={onDeleteUser}

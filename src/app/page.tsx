@@ -240,6 +240,7 @@ export default function Home() {
           {activeView === "users" && (
             <SettingsView
               users={data.users}
+              currentUserRole={user.role}
               onAddUser={data.handleAddUser}
               onEditUser={data.handleEditUser}
               onDeleteUser={data.handleDeleteUser}
