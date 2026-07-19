@@ -55,9 +55,8 @@ export default function Home() {
   );
 
   const isViewer = user?.role === "viewer";
-  const isDeveloper = user?.name === "abnmazin" && user?.role === "admin";
+  const isDeveloper = user?.role === "admin";
 
-  // Sync auth user to DataContext for activity logging
   useEffect(() => {
     data.setAuthUser(user);
     return () => data.setAuthUser(null);
@@ -73,7 +72,6 @@ export default function Home() {
     []
   );
 
-  // Guard: redirect to first allowed view if current view is not allowed
   useEffect(() => {
     if (user && !ROLE_ALLOWED_VIEWS[user.role].includes(activeView)) {
       setActiveView(ROLE_ALLOWED_VIEWS[user.role][0]);
