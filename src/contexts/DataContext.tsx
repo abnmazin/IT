@@ -1,0 +1,489 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from "react";
+import {
+  WarehouseItem,
+  Visit,
+  Box,
+  BoxItem,
+  User,
+  Category,
+  ActivityLogEntry,
+  ActivityType,
+} from "@/types";
+import {
+  subscribeWarehouseItems,
+  subscribeVisits,
+  subscribeCategories,
+  subscribeActivityLog,
+  subscribeUsers,
+  saveWarehouseItem,
+  deleteWarehouseItemFS,
+  saveVisit,
+  deleteVisitFS,
+  saveCategory,
+  deleteCategoryFS,
+  saveUser,
+  deleteUserFS,
+  addActivityEntry,
+  seedFirestoreIfNeeded,
+} from "@/lib/firestore";
+
+interface DataContextType {
+  warehouseItems: WarehouseItem[];
+  visits: Visit[];
+  categories: Category[];
+  activityLog: ActivityLogEntry[];
+  users: User[];
+  loading: boolean;
+  newNotificationCount: number;
+  clearNotifications: () => void;
+
+  logActivity: (type: ActivityType, description: string, details?: string, visitId?: string) => void;
+
+  handleAddWarehouseItem: (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
+  handleEditWarehouseItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
+  handleDeleteWarehouseItem: (id: string) => void;
+
+  handleAddCategory: (key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
+  handleEditCategory: (id: string, key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
+  handleDeleteCategory: (id: string) => void;
+
+  handleAddVisit: (name: string, date: string, hijriDate?: string) => void;
+  handleToggleVisit: (visitId: string) => void;
+  handleCollectVisit: (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => void;
+  handleFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
+  handleReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
+  handleAddBox: (visitId: string, name: string, label: string) => void;
+  handleDeleteBox: (visitId: string, boxId: string) => void;
+  handleReactivateVisit: (visitId: string) => void;
+  handleFillBoxesFromTemplate: (visitId: string) => void;
+  handleUpdateBoxItemQty: (visitId: string, boxId: string, warehouseItemId: string, delta: number) => void;
+
+  handleAddUser: (name: string, email: string, role: User["role"], pin: string) => void;
+  handleEditUser: (id: string, name: string, email: string, role: User["role"], pin: string) => void;
+  handleDeleteUser: (id: string) => void;
+  handleToggleUser: (id: string) => void;
+}
+
+const DataContext = createContext<DataContextType>({} as DataContextType);
+
+export function useData() {
+  return useContext(DataContext);
+}
+
+function now() {
+  return new Date().toISOString();
+}
+
+function today() {
+  return new Date().toISOString().split("T")[0];
+}
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newNotificationCount, setNewNotificationCount] = useState(0);
+  const prevLogLength = useRef(0);
+
+  // Subscribe to Firestore
+  useEffect(() => {
+    let unsubs: (() => void)[] = [];
+
+    async function init() {
+      await seedFirestoreIfNeeded();
+      unsubs = [
+        subscribeWarehouseItems((items) => { setWarehouseItems(items); setLoading(false); }),
+        subscribeVisits((v) => setVisits(v)),
+        subscribeCategories((c) => setCategories(c)),
+        subscribeActivityLog((log) => setActivityLog(log)),
+        subscribeUsers((u) => setUsers(u)),
+      ];
+    }
+
+    init();
+    return () => unsubs.forEach((u) => u());
+  }, []);
+
+  // Track new notifications
+  useEffect(() => {
+    if (activityLog.length > 0 && prevLogLength.current > 0 && activityLog.length > prevLogLength.current) {
+      setNewNotificationCount((c) => c + (activityLog.length - prevLogLength.current));
+    }
+    prevLogLength.current = activityLog.length;
+  }, [activityLog]);
+
+  const clearNotifications = useCallback(() => setNewNotificationCount(0), []);
+
+  const currentUser = users[0] || null;
+
+  const logActivity = useCallback(
+    (type: ActivityType, description: string, details?: string, visitId?: string) => {
+      if (!currentUser) return;
+      const entry: ActivityLogEntry = {
+        id: `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type,
+        description,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        timestamp: now(),
+        visitId,
+        details,
+      };
+      addActivityEntry(entry);
+    },
+    [currentUser]
+  );
+
+  // ── Warehouse ─────────────────────────────────────
+  const handleAddWarehouseItem = useCallback(
+    (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
+      const item: WarehouseItem = {
+        id: `wh-${Date.now()}`,
+        name,
+        category: category as WarehouseItem["category"],
+        serialNumber: serialNumber || undefined,
+        totalQty,
+        consumable,
+      };
+      saveWarehouseItem(item);
+      logActivity("add_item", `إضافة صنف للمخزن: ${name}`);
+    },
+    [logActivity]
+  );
+
+  const handleEditWarehouseItem = useCallback(
+    (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
+      const item: WarehouseItem = {
+        id,
+        name,
+        category: category as WarehouseItem["category"],
+        serialNumber: serialNumber || undefined,
+        totalQty,
+        consumable,
+      };
+      saveWarehouseItem(item);
+    },
+    []
+  );
+
+  const handleDeleteWarehouseItem = useCallback(
+    (id: string) => {
+      const item = warehouseItems.find((i) => i.id === id);
+      deleteWarehouseItemFS(id);
+      if (item) logActivity("add_item", `حذف صنف من المخزن: ${item.name}`);
+    },
+    [warehouseItems, logActivity]
+  );
+
+  // ── Categories ────────────────────────────────────
+  const handleAddCategory = useCallback(
+    (key: string, label: string, serialTracked: boolean, consumable: boolean) => {
+      const cat: Category = { id: `cat-${Date.now()}`, key: key as Category["key"], label, serialTracked, consumable };
+      saveCategory(cat);
+      logActivity("add_category", `إضافة فئة جديدة: ${label}`);
+    },
+    [logActivity]
+  );
+
+  const handleEditCategory = useCallback(
+    (id: string, key: string, label: string, serialTracked: boolean, consumable: boolean) => {
+      const cat: Category = { id, key: key as Category["key"], label, serialTracked, consumable };
+      saveCategory(cat);
+    },
+    []
+  );
+
+  const handleDeleteCategory = useCallback(
+    (id: string) => {
+      const cat = categories.find((c) => c.id === id);
+      deleteCategoryFS(id);
+      if (cat) logActivity("delete_category", `حذف فئة: ${cat.label}`);
+    },
+    [categories, logActivity]
+  );
+
+  // ── Visits ────────────────────────────────────────
+  const handleAddVisit = useCallback(
+    (name: string, date: string, hijriDate?: string) => {
+      const visit: Visit = {
+        id: `visit-${Date.now()}`,
+        name,
+        date,
+        hijriDate: hijriDate || undefined,
+        status: "inactive",
+        boxes: [],
+      };
+      saveVisit(visit);
+      logActivity("add_visit", `إضافة زيارة جديدة: ${name}`, undefined, visit.id);
+    },
+    [logActivity]
+  );
+
+  const handleToggleVisit = useCallback(
+    (visitId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const nextStatus =
+        visit.status === "inactive" ? "active" :
+        visit.status === "active" ? "collecting" :
+        visit.status === "collecting" ? "completed" : "inactive";
+      saveVisit({ ...visit, status: nextStatus as Visit["status"] });
+      logActivity(
+        nextStatus === "active" ? "activate_visit" :
+        nextStatus === "collecting" ? "collect_visit" :
+        nextStatus === "completed" ? "complete_visit" : "deactivate_visit",
+        `${nextStatus === "active" ? "تفعيل" : nextStatus === "collecting" ? "جمع العناصر" : nextStatus === "completed" ? "إنهاء" : "إلغاء تفعيل"} زيارة: ${visit.name}`,
+        undefined,
+        visitId
+      );
+    },
+    [visits, logActivity]
+  );
+
+  const handleCollectVisit = useCallback(
+    (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const updated: Visit = {
+        ...visit,
+        status: "completed",
+        boxes: visit.boxes.map((b) => ({
+          ...b,
+          items: b.items.map((bi) => {
+            const c = collected.find((x) => x.warehouseItemId === bi.warehouseItemId);
+            if (c) return { ...bi, status: c.status, returnedQty: c.status === "returned" ? c.qty : 0 };
+            return { ...bi, status: "missing" as const };
+          }),
+        })),
+      };
+      saveVisit(updated);
+      logActivity("complete_visit", `إنهاء زيارة: ${visit.name}`, `تم جمع ${collected.length} صنف`, visitId);
+    },
+    [visits, logActivity]
+  );
+
+  const handleFillBox = useCallback(
+    (visitId: string, boxId: string, items: BoxItem[]) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => {
+          if (b.id !== boxId) return b;
+          return { ...b, items: [...b.items, ...items] };
+        }),
+      };
+      saveVisit(updated);
+      items.forEach((item) => {
+        const whItem = warehouseItems.find((w) => w.id === item.warehouseItemId);
+        if (whItem) {
+          saveWarehouseItem({ ...whItem, totalQty: Math.max(0, whItem.totalQty - item.qty) });
+        }
+      });
+      const box = visit.boxes.find((b) => b.id === boxId);
+      const itemNames = items.map((i) => `${i.name}(${i.qty})`).join(" + ");
+      logActivity("fill_box", `تعبئة ${box?.name || "صندوق"} — ${itemNames}`, visit.name, visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleReturnItems = useCallback(
+    (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => {
+          if (b.id !== boxId) return b;
+          return {
+            ...b,
+            items: b.items
+              .map((bi) => {
+                const ret = returned.find((r) => r.warehouseItemId === bi.warehouseItemId);
+                if (ret) return { ...bi, qty: bi.qty - ret.qty, returnedQty: ret.qty };
+                return bi;
+              })
+              .filter((bi) => bi.qty > 0),
+          };
+        }),
+      };
+      saveVisit(updated);
+      returned.forEach((r) => {
+        const whItem = warehouseItems.find((w) => w.id === r.warehouseItemId);
+        if (whItem) {
+          saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty + r.qty });
+        }
+      });
+      logActivity("return_items", `إرجاع مواد من صندوق ${boxId} للمخزن`, visit.name, visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleAddBox = useCallback(
+    (visitId: string, name: string, label: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const newBox: Box = { id: `box-${Date.now()}`, name, label: label || undefined, items: [] };
+      saveVisit({ ...visit, boxes: [...visit.boxes, newBox] });
+      logActivity("fill_box", `إضافة صندوق جديد: ${name}`);
+    },
+    [visits, logActivity]
+  );
+
+  const handleDeleteBox = useCallback(
+    (visitId: string, boxId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      saveVisit({ ...visit, boxes: visit.boxes.filter((b) => b.id !== boxId) });
+    },
+    [visits]
+  );
+
+  const handleUpdateBoxItemQty = useCallback(
+    (visitId: string, boxId: string, warehouseItemId: string, delta: number) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => {
+          if (b.id !== boxId) return b;
+          return {
+            ...b,
+            items: b.items
+              .map((bi) => {
+                if (bi.warehouseItemId !== warehouseItemId) return bi;
+                const newQty = bi.qty + delta;
+                return { ...bi, qty: newQty };
+              })
+              .filter((bi) => bi.qty > 0),
+          };
+        }),
+      };
+      saveVisit(updated);
+    },
+    [visits]
+  );
+
+  const handleReactivateVisit = useCallback(
+    (visitId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const restored: Record<string, number> = {};
+      visit.boxes.forEach((b) =>
+        b.items.forEach((bi) => {
+          if (bi.status === "returned" && bi.returnedQty && bi.returnedQty > 0) {
+            restored[bi.warehouseItemId] = (restored[bi.warehouseItemId] || 0) + bi.returnedQty;
+          }
+        })
+      );
+      const updated: Visit = {
+        ...visit,
+        status: "inactive",
+        boxes: visit.boxes.map((b) => ({
+          ...b,
+          items: b.items.map((bi) => ({ ...bi, qty: 0, returnedQty: undefined, status: undefined })),
+        })),
+      };
+      saveVisit(updated);
+      Object.entries(restored).forEach(([id, qty]) => {
+        const whItem = warehouseItems.find((w) => w.id === id);
+        if (whItem) saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty + qty });
+      });
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "تم إرجاع العناصر المُرجعة للمخزن، القالب جاهز", visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleFillBoxesFromTemplate = useCallback(
+    (visitId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const needed: Record<string, number> = {};
+      visit.boxes.forEach((b) =>
+        b.items.forEach((bi) => { needed[bi.warehouseItemId] = (needed[bi.warehouseItemId] || 0) + bi.qty; })
+      );
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => ({
+          ...b,
+          items: b.items.map((bi) => ({ ...bi, qty: bi.qty })),
+        })),
+      };
+      saveVisit(updated);
+      Object.entries(needed).forEach(([id, req]) => {
+        if (req > 0) {
+          const whItem = warehouseItems.find((w) => w.id === id);
+          if (whItem) saveWarehouseItem({ ...whItem, totalQty: Math.max(0, whItem.totalQty - req) });
+        }
+      });
+      logActivity("fill_box", `تعبئة صناديق من القالب: ${visit.name}`, undefined, visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  // ── Users ─────────────────────────────────────────
+  const handleAddUser = useCallback(
+    (name: string, email: string, role: User["role"], pin: string) => {
+      const user: User = { id: `user-${Date.now()}`, name, email, role, pin, active: true };
+      saveUser(user);
+      logActivity("add_user", `إضافة مستخدم جديد: ${name}`, `الدور: ${role}`);
+    },
+    [logActivity]
+  );
+
+  const handleEditUser = useCallback(
+    (id: string, name: string, email: string, role: User["role"], pin: string) => {
+      const user = users.find((u) => u.id === id);
+      if (user) saveUser({ ...user, name, email, role, pin });
+    },
+    [users]
+  );
+
+  const handleDeleteUser = useCallback(
+    (id: string) => {
+      const user = users.find((u) => u.id === id);
+      deleteUserFS(id);
+      if (user) logActivity("delete_user", `حذف المستخدم: ${user.name}`);
+    },
+    [users, logActivity]
+  );
+
+  const handleToggleUser = useCallback(
+    (id: string) => {
+      const user = users.find((u) => u.id === id);
+      if (user) saveUser({ ...user, active: !user.active });
+    },
+    [users]
+  );
+
+  return (
+    <DataContext.Provider
+      value={{
+        warehouseItems, visits, categories, activityLog, users, loading,
+        newNotificationCount, clearNotifications,
+        logActivity,
+        handleAddWarehouseItem, handleEditWarehouseItem, handleDeleteWarehouseItem,
+        handleAddCategory, handleEditCategory, handleDeleteCategory,
+        handleAddVisit, handleToggleVisit, handleCollectVisit,
+        handleFillBox, handleReturnItems, handleAddBox, handleDeleteBox,
+        handleReactivateVisit, handleFillBoxesFromTemplate, handleUpdateBoxItemQty,
+        handleAddUser, handleEditUser, handleDeleteUser, handleToggleUser,
+      }}
+    >
+      {children}
+    </DataContext.Provider>
+  );
+}

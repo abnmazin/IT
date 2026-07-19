@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-19] — Firebase Integration
+
+### Added
+- **Firebase SDK**: `firebase` package installed, configured with project `it-hs-d2ca4`
+- **Firestore service layer** (`src/lib/firestore.ts`): Real-time `onSnapshot` subscribe functions for all collections + CRUD operations + `seedFirestoreIfNeeded` for first-run seeding
+- **AuthContext** (`src/contexts/AuthContext.tsx`): PIN-based login against Firestore `users` collection, localStorage session persistence, `subscribeUsers` real-time listener
+- **DataContext** (`src/contexts/DataContext.tsx`): Firestore real-time listeners for all collections, all CRUD handlers, notification tracking (`newNotificationCount`), `clearNotifications`
+- **LoginPage** (`src/components/LoginPage.tsx`): Username + numeric PIN login form with dark gradient background
+- **Providers** (`src/components/Providers.tsx`): Wraps AuthProvider + DataProvider
+- **`.env.local`**: Firebase project credentials (not committed)
+- **`.env.local.example`**: Firebase config template
+
+### Changed
+- **page.tsx**: Rewritten to use `useAuth()` + `useData()` contexts instead of local state; no more `mockData` imports at runtime
+- **layout.tsx**: Wrapped children with `<Providers>`
+- **Header.tsx**: Added `notificationCount` prop (red badge), `onLogout` prop, user name display
+- **UsersSettings.tsx**: Added PIN field (numeric, password-masked) in add/edit user forms
+- **SettingsView.tsx**: Updated prop types to include `pin` parameter
+- **mockData.ts**: Added `pin: "1234"` to all seed users
+- **firestore.ts**: Imports seed data + defaultCategories, adds `seedFirestoreIfNeeded` function
+
+### Architecture
+- Real-time sync: All reads use Firestore `onSnapshot`, writes use `setDoc` with client-generated IDs
+- Offline persistence: `enableIndexedDbPersistence` for offline support
+- First-run seeding: Checks if any collection is empty, seeds all if so
+- Auth: PIN-based (no email/password), session persisted in localStorage
+
+### Build
+- Build passes: 21.1 kB page / 280 kB first load
+
+---
+
 ## [2026-07-18] — Mock Completed Visits + Dashboard Chart
 
 ### Added

@@ -11,12 +11,14 @@ D:\Programing\Website\IT\
 ├── src/
 │   ├── app/
 │   │   ├── globals.css       # Tailwind imports, scrollbar, RTL utilities
-│   │   ├── layout.tsx        # Root layout: Arabic font, dir="rtl"
-│   │   └── page.tsx          # Main SPA: state management, view routing
+│   │   ├── layout.tsx        # Root layout: Arabic font, dir="rtl", <Providers>
+│   │   └── page.tsx          # Main SPA: uses useAuth() + useData(), view routing
 │   ├── components/
 │   │   ├── Sidebar.tsx           # Collapsible RTL sidebar navigation (8 pages)
-│   │   ├── Header.tsx            # Top bar: search, notifications, user avatar
-│   │   ├── DashboardView.tsx     # Stats + visits comparison chart + activity feed
+│   │   ├── Header.tsx            # Top bar: notifications badge, user name, logout
+│   │   ├── LoginPage.tsx         # PIN-based login form (username + numeric PIN)
+│   │   ├── Providers.tsx         # Wraps AuthProvider + DataProvider
+│   │   ├── DashboardView.tsx     # Stats + visits comparison chart
 │   │   ├── WarehouseView.tsx     # Grid cards: warehouse items + category management
 │   │   ├── BoxesView.tsx         # Active visit boxes (display-only)
 │   │   ├── BoxDetailView.tsx     # Display-only box view (boxes page) with +/- controls
@@ -25,14 +27,22 @@ D:\Programing\Website\IT\
 │   │   ├── CollectionView.tsx    # Partial return controls per box/category
 │   │   ├── VisitReport.tsx       # Full comparison report per visit
 │   │   ├── TransfersView.tsx     # Completed visits archive (expandable cards)
-│   │   ├── SettingsView.tsx      # Tabbed settings container (users only)
-│   │   ├── UsersSettings.tsx     # User CRUD table + add/edit modal
+│   │   ├── SettingsView.tsx      # Users page container
+│   │   ├── UsersSettings.tsx     # User CRUD table + add/edit modal (with PIN)
 │   │   ├── CategoriesSettings.tsx # Category CRUD table + consumable toggle
 │   │   ├── ActivityLogView.tsx   # Searchable/filterable activity log with date picker
+│   ├── contexts/
+│   │   ├── AuthContext.tsx        # Auth state: login(username, pin), logout, session persistence
+│   │   └── DataContext.tsx        # Data state: Firestore real-time listeners, all CRUD handlers
+│   ├── lib/
+│   │   ├── firebase.ts           # Firebase app init + Firestore + offline persistence
+│   │   └── firestore.ts          # Service layer: subscribe (onSnapshot), CRUD, seed helper
 │   ├── data/
-│   │   └── mockData.ts       # Warehouse items, visits, users, activity log
+│   │   └── mockData.ts       # Seed data: warehouse items, visits, users, activity log
 │   └── types/
 │       └── index.ts          # TypeScript types, constants, helpers
+├── .env.local               # Firebase credentials (not committed)
+├── .env.local.example       # Firebase credentials template
 ├── tailwind.config.js
 ├── next.config.js
 ├── tsconfig.json
@@ -44,111 +54,125 @@ D:\Programing\Website\IT\
 
 ```
 RootLayout (layout.tsx) — <html dir="rtl" lang="ar">
-└── Page (page.tsx) — State owner
-    ├── warehouseItems, visits, users, categories, activityLog
-    ├── activeView, searchQuery, sidebarCollapsed, mobileMenuOpen
-    │
-    ├── Sidebar — Fixed right-side navigation (RTL)
-    │   └── Nav: لوحة التحكم, المخزن, الصناديق, الزيارات, الزيارات المكتملة
-    │   └── Bottom: المستخدمين, الفئات, سجل النشاط
-    │
-    ├── Header — Top bar
-    │   ├── Hamburger button (mobile only)
-    │   ├── Global search input
-    │   └── Notification bell + Current user name/avatar
-    │
-    └── Active View (conditional render):
-        │
-        ├── DashboardView
-        │   ├── Stat cards (3x): إجمالي المخزن, العناصر في الزيارات, زيارات نشطة
-        │   ├── Visits comparison stacked bar chart (returned/consumed/missing)
-        │   └── Recent activity feed (last 5 entries)
-        │
-        ├── WarehouseView
-        │   ├── Grid cards: warehouse items with consumable/serial badges
-        │   ├── Search + category filter dropdown
-        │   ├── "+ إضافة صنف" button → inline form
-        │   └── "+ إضافة فئة" button → inline form (violet)
-        │
-        ├── BoxesView (display-only)
-        │   ├── Active visit boxes with +/- quantity controls
-        │   ├── Fixed reference qty under item name
-        │   └── "لا توجد زيارة مفعلة" message when no active visit
-        │
-        ├── VisitsView (all statuses including completed)
-        │   ├── Visit cards grouped by status
-        │   ├── Inactive with boxes: تعبئة (fill) + تفعيل (activate) buttons
-        │   ├── Shortage warning panel (amber) with item details
-        │   ├── Activation dialog (year + hijri date input)
-        │   └── "+ إضافة زيارة" button
-        │
-        ├── VisitDetailView
-        │   ├── Box cards grid with fill/collect/complete buttons
-        │   ├── Activation confirmation dialog
-        │   ├── Collecting mode (CollectionView per box)
-        │   └── Per-visit activity log (expandable)
-        │
-        ├── CollectionView
-        │   ├── Per-box or per-category view toggle
-        │   ├── +/- controls for partial return
-        │   ├── Consumables default to 0, non-consumable default to full
-        │   └── No "missing" button (red indicator obvious)
-        │
-        ├── CompletedVisitsView (archive)
-        │   ├── Expandable cards per completed visit
-        │   ├── Full detail per box and item
-        │   └── Reset button to reactivate template
-        │
-        ├── VisitReport
-        │   ├── Per-box breakdown with statuses
-        │   └── Summary: returned/consumed/missing
-        │
-        ├── SettingsView (users only)
-        │   └── UsersSettings — CRUD table + add/edit modal
-        │
-        ├── CategoriesSettings
-        │   └── Category table with consumable toggle
-        │
-        └── ActivityLogView
-            ├── Filter panel: type filters + date picker + visit selector
-            ├── Search by description/username
-            └── Log entries with timestamp, user avatar, type badge
+└── Providers (Providers.tsx)
+    ├── AuthProvider (AuthContext.tsx) — login/logout, session persistence
+    └── DataProvider (DataContext.tsx) — Firestore real-time listeners, CRUD handlers
+        └── Page (page.tsx) — View router, auth gate
+            ├── !user → LoginPage (username + PIN)
+            └── user →
+                ├── Sidebar — Fixed right-side navigation (RTL)
+                ├── Header — Notifications badge + user name + logout
+                └── Active View (conditional render):
+                    │
+                    ├── DashboardView
+                    │   ├── Stat cards (3x): إجمالي المخزن, العناصر في الزيارات, زيارات نشطة
+                    │   └── Visits comparison stacked bar chart (returned/consumed/missing)
+                    │
+                    ├── WarehouseView
+                    │   ├── Grid cards: warehouse items with consumable/serial badges
+                    │   ├── Search + category filter dropdown
+                    │   ├── "+ إضافة صنف" button → inline form
+                    │   └── "+ إضافة فئة" button → inline form (violet)
+                    │
+                    ├── BoxesView (display-only)
+                    │   ├── Active visit boxes with +/- quantity controls
+                    │   ├── Fixed reference qty under item name
+                    │   └── "لا توجد زيارة مفعلة" message when no active visit
+                    │
+                    ├── VisitsView (all statuses including completed)
+                    │   ├── Visit cards grouped by status
+                    │   ├── Inactive with boxes: تعبئة (fill) + تفعيل (activate) buttons
+                    │   ├── Shortage warning panel (amber) with item details
+                    │   ├── Activation dialog (year + hijri date input)
+                    │   └── "+ إضافة زيارة" button
+                    │
+                    ├── VisitDetailView
+                    │   ├── Box cards grid with fill/collect/complete buttons
+                    │   ├── Activation confirmation dialog
+                    │   ├── Collecting mode (CollectionView per box)
+                    │   └── Per-visit activity log (expandable)
+                    │
+                    ├── CollectionView
+                    │   ├── Per-box or per-category view toggle
+                    │   ├── +/- controls for partial return
+                    │   ├── Consumables default to 0, non-consumable default to full
+                    │   └── No "missing" button (red indicator obvious)
+                    │
+                    ├── CompletedVisitsView (archive)
+                    │   ├── Expandable cards per completed visit
+                    │   ├── Full detail per box and item
+                    │   └── Reset button to reactivate template
+                    │
+                    ├── VisitReport
+                    │   ├── Per-box breakdown with statuses
+                    │   └── Summary: returned/consumed/missing
+                    │
+                    ├── SettingsView (users only)
+                    │   └── UsersSettings — CRUD table + add/edit modal (with PIN field)
+                    │
+                    ├── CategoriesSettings
+                    │   └── Category table with consumable toggle
+                    │
+                    └── ActivityLogView
+                        ├── Filter panel: type filters + date picker + visit selector
+                        ├── Search by description/username
+                        └── Log entries with timestamp, user avatar, type badge
 ```
 
 ## Data Flow
 
 ```
-page.tsx (State Owner)
-├── warehouseItems: WarehouseItem[]  → WarehouseView (read/write), BoxesView (read)
-├── visits: Visit[]                  → VisitsView, VisitDetailView, BoxesView, CompletedVisitsView
-├── categories: Category[]           → CategoriesSettings (read/write), WarehouseView (read/write)
-├── users: User[]                    → UsersSettings (read/write), Header (currentUser)
-├── activityLog: ActivityLogEntry[]  → ActivityLogView (read), DashboardView (read)
-├── activeView: View                 → Sidebar (read/write)
-├── searchQuery: string              → Header (write), WarehouseView (read)
-├── sidebarCollapsed: boolean        → Sidebar (read/write)
-├── mobileMenuOpen: boolean          → Sidebar + Header (read/write)
+page.tsx — Uses contexts, no local data state
+├── useAuth() → AuthContext
+│   ├── user: User | null         — Current logged-in user (or null → LoginPage)
+│   ├── login(username, pin)      — Authenticate against Firestore users collection
+│   ├── logout()                  — Clear session (localStorage)
+│   └── loading: boolean          — True while Firestore initializes
 │
-├── logActivity(type, desc, details?, visitId?) → All mutation handlers
-├── handleAddWarehouseItem(data)       → WarehouseView
-├── handleEditWarehouseItem(id, data)  → WarehouseView
-├── handleDeleteWarehouseItem(id)      → WarehouseView
-├── handleAddCategory(key,serial,consumable) → WarehouseView
-├── handleEditCategory(id, data)       → CategoriesSettings
-├── handleDeleteCategory(id)           → CategoriesSettings
-├── handleReactivateVisit(visitId)         → VisitsView (reactivate completed → inactive)
-├── handleFillBoxesFromTemplate(visitId)   → VisitsView (fill from template with stock check)
-├── handleAddVisit(name, date, hijriDate?) → VisitsView
-├── handleToggleVisit(id)              → VisitDetailView (activate/deactivate)
-├── handleCollectVisit(id)             → VisitDetailView (start collecting)
-├── handleCompleteVisit(id, report)    → CollectionView (finish, move to archive)
-├── handleFillBox(visitId, boxId, items) → VisitDetailView (fill box from warehouse)
-├── handleReturnItems(visitId, boxId, items) → CollectionView (return to warehouse)
-├── handleAddUser(data)                → UsersSettings
-├── handleEditUser(id, data)           → UsersSettings
-├── handleToggleUserActive(id)         → UsersSettings
-└── handleNavigate(view)              → Sidebar, Header
+├── useData() → DataContext
+│   ├── warehouseItems: WarehouseItem[]  — Real-time from Firestore
+│   ├── visits: Visit[]                  — Real-time from Firestore
+│   ├── categories: Category[]           — Real-time from Firestore
+│   ├── users: User[]                    — Real-time from Firestore
+│   ├── activityLog: ActivityLogEntry[]  — Real-time from Firestore (ordered by timestamp desc)
+│   ├── loading: boolean                 — True while initial data loads
+│   ├── newNotificationCount: number     — Tracks new activity entries since last clear
+│   ├── clearNotifications()             — Resets notification badge count
+│   │
+│   ├── handleAddWarehouseItem(name, cat, serial, qty, consumable) → saveWarehouseItem()
+│   ├── handleEditWarehouseItem(id, name, cat, serial, qty, consumable) → saveWarehouseItem()
+│   ├── handleDeleteWarehouseItem(id) → deleteWarehouseItemFS()
+│   ├── handleAddCategory(key, label, serial, consumable) → saveCategory()
+│   ├── handleEditCategory(id, key, label, serial, consumable) → saveCategory()
+│   ├── handleDeleteCategory(id) → deleteCategoryFS()
+│   ├── handleAddVisit(name, date, hijriDate?) → saveVisit()
+│   ├── handleToggleVisit(id) → saveVisit()
+│   ├── handleCollectVisit(id, collected[]) → saveVisit()
+│   ├── handleFillBox(visitId, boxId, items) → saveVisit() + saveWarehouseItem()
+│   ├── handleReturnItems(visitId, boxId, returned[]) → saveVisit() + saveWarehouseItem()
+│   ├── handleAddBox(visitId, name, label) → saveVisit()
+│   ├── handleDeleteBox(visitId, boxId) → saveVisit()
+│   ├── handleReactivateVisit(visitId) → saveVisit() + saveWarehouseItem()
+│   ├── handleFillBoxesFromTemplate(visitId) → saveVisit() + saveWarehouseItem()
+│   ├── handleUpdateBoxItemQty(visitId, boxId, warehouseItemId, delta) → saveVisit()
+│   ├── handleAddUser(name, email, role, pin) → saveUser()
+│   ├── handleEditUser(id, name, email, role, pin) → saveUser()
+│   ├── handleDeleteUser(id) → deleteUserFS()
+│   └── handleToggleUser(id) → saveUser()
+│
+└── Firestore subscriptions (real-time via onSnapshot)
+    ├── subscribeWarehouseItems → setWarehouseItems
+    ├── subscribeVisits → setVisits
+    ├── subscribeCategories → setCategories
+    ├── subscribeActivityLog → setActivityLog (ordered by timestamp desc)
+    └── subscribeUsers → setUsers
 ```
+
+### First-Run Seed
+- `seedFirestoreIfNeeded()` in DataContext checks if Firestore collections are empty
+- If any collection is empty, seeds all collections from `mockData.ts` + `defaultCategories`
+- Runs once per app session (module-level `seeded` flag)
+- Seed function: `seedCollection<T>(colName, items[])` in firestore.ts
 
 ## Data Model
 
@@ -158,7 +182,7 @@ Visit (زيارة)                 — id, name, date, hijriDate?, year?, status
 Box (صندوق)                   — id, name, label?, items[]
 BoxItem (صنف صندوق)          — warehouseItemId, name, category, serialNumber?, qty, consumable, returnedQty?, status?
 Category (فئة)                — id, key, label, serialTracked, consumable
-User (مستخدم)                 — id, name, email, role (admin|technician|viewer), active
+User (مستخدم)                 — id, name, email, role (admin|technician|viewer), pin, active
 ActivityLogEntry (سجل)        — id, type, description, userId, userName, timestamp, visitId?, details?
 VisitReport (تقرير زيارة)    — visitId, visitName, hijriDate?, gregorianDate, completedAt, summary, boxReports[]
 ```
@@ -205,9 +229,31 @@ dashboard | warehouse | boxes | visits | completed-visits | users | categories-s
 - Bottom action buttons stack vertically on mobile
 - Modals: full-width on mobile with padding
 
-## Mock Data
+## Mock Data / Seed Data
 
 - 66 warehouse items: 40 laptops (IT 01–IT 40, serial-tracked) + peripherals (monitors, printers, keyboards, mice, cables, labels, headsets, adapters, docking stations)
-- 2 visits with boxes containing items
-- 4 users (admin, 2 technicians, viewer)
+- 6 visits (2 template/inactive + 4 completed with realistic returned/consumed/missing statuses)
+- 4 users (admin, 2 technicians, viewer) — all with PIN: "1234"
 - 6 activity log entries with visitIds
+- 10 default categories (Laptop, Keyboard, Mouse, Monitor, Printer, Cable, Label, Headset, Adapter, Docking Station)
+
+## Firebase Integration
+
+### Firestore Collections
+- `users` — User documents with pin field for PIN-based authentication
+- `warehouseItems` — All warehouse items with serial numbers and quantities
+- `visits` — Visit documents containing nested boxes and box items
+- `categories` — Category definitions (10 defaults seeded on first run)
+- `activityLog` — Activity entries ordered by timestamp descending
+
+### Auth Flow
+1. User opens app → LoginPage shown (username + numeric PIN)
+2. AuthContext checks Firestore `users` collection for matching name + active status
+3. On match, user stored in state + localStorage for session persistence
+4. Subsequent visits auto-restore session from localStorage (no re-login needed)
+
+### Real-Time Sync
+- All data reads use `onSnapshot` (real-time Firestore listeners)
+- All writes use `setDoc` with document IDs (client-generated, not auto-generated)
+- Offline persistence enabled via `enableIndexedDbPersistence`
+- Changes sync automatically across all connected clients

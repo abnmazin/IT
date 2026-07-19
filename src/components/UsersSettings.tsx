@@ -6,8 +6,8 @@ import { Plus, Edit2, Trash2, X, UserCheck, UserX } from "lucide-react";
 
 interface UsersSettingsProps {
   users: User[];
-  onAdd: (name: string, email: string, role: UserRole) => void;
-  onEdit: (id: string, name: string, email: string, role: UserRole) => void;
+  onAdd: (name: string, email: string, role: UserRole, pin: string) => void;
+  onEdit: (id: string, name: string, email: string, role: UserRole, pin: string) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
 }
@@ -30,12 +30,14 @@ export default function UsersSettings({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("technician");
+  const [pin, setPin] = useState("");
 
   const openAdd = () => {
     setEditingUser(null);
     setName("");
     setEmail("");
     setRole("technician");
+    setPin("");
     setShowModal(true);
   };
 
@@ -44,16 +46,17 @@ export default function UsersSettings({
     setName(user.name);
     setEmail(user.email);
     setRole(user.role);
+    setPin(user.pin || "");
     setShowModal(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !email.trim() || !pin.trim()) return;
     if (editingUser) {
-      onEdit(editingUser.id, name.trim(), email.trim(), role);
+      onEdit(editingUser.id, name.trim(), email.trim(), role, pin.trim());
     } else {
-      onAdd(name.trim(), email.trim(), role);
+      onAdd(name.trim(), email.trim(), role, pin.trim());
     }
     setShowModal(false);
   };
@@ -222,6 +225,20 @@ export default function UsersSettings({
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">رمز الدخول (PIN) *</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="4-6 أرقام"
+                  maxLength={6}
+                  className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400"
+                  dir="ltr"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">الدور *</label>
                 <div className="grid grid-cols-3 gap-2">
                   {(Object.entries(USER_ROLE_LABELS) as [UserRole, string][]).map(([value, label]) => (
@@ -243,7 +260,7 @@ export default function UsersSettings({
               <div className="flex gap-3 pt-2 pb-2">
                 <button
                   type="submit"
-                  disabled={!name.trim() || !email.trim()}
+                  disabled={!name.trim() || !email.trim() || !pin.trim()}
                   className="flex-1 h-11 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   {editingUser ? "حفظ التعديلات" : "إضافة"}

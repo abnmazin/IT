@@ -5,8 +5,8 @@ import UsersSettings from "./UsersSettings";
 
 interface SettingsViewProps {
   users: User[];
-  onAddUser: (name: string, email: string, role: User["role"]) => void;
-  onEditUser: (id: string, name: string, email: string, role: User["role"]) => void;
+  onAddUser: (name: string, email: string, role: User["role"], pin: string) => void;
+  onEditUser: (id: string, name: string, email: string, role: User["role"], pin: string) => void;
   onDeleteUser: (id: string) => void;
   onToggleUser: (id: string) => void;
 }
