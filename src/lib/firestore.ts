@@ -129,21 +129,30 @@ export async function seedCollection<T>(colName: string, items: T[]): Promise<vo
   }
 }
 
+// ── Clear all Firestore data and re-seed ─────────────────────
+export async function resetFirestore(): Promise<void> {
+  const collections = [COL.users, COL.warehouseItems, COL.visits, COL.categories, COL.activityLog];
+  for (const col of collections) {
+    const snap = await getDocs(collection(db, col));
+    for (const d of snap.docs) {
+      await deleteDoc(d.ref);
+    }
+  }
+  await Promise.all([
+    seedCollection(COL.users, initialUsers),
+    seedCollection(COL.categories, defaultCategories),
+  ]);
+  seeded = true;
+}
+
 // ── Check if Firestore is empty and seed if needed ───────────
 let seeded = false;
 
 export async function seedFirestoreIfNeeded(): Promise<boolean> {
   if (seeded) return false;
 
-  const collectionsToCheck = [
-    COL.users,
-    COL.warehouseItems,
-    COL.visits,
-    COL.categories,
-  ];
-
   const checks = await Promise.all(
-    collectionsToCheck.map(async (col) => {
+    [COL.users, COL.categories].map(async (col) => {
       const snap = await getDocs(collection(db, col));
       return snap.empty;
     })
@@ -157,10 +166,7 @@ export async function seedFirestoreIfNeeded(): Promise<boolean> {
 
   await Promise.all([
     seedCollection(COL.users, initialUsers),
-    seedCollection(COL.warehouseItems, initialWarehouseItems),
     seedCollection(COL.categories, defaultCategories),
-    seedCollection(COL.visits, initialVisits),
-    seedCollection(COL.activityLog, initialActivityLog),
   ]);
 
   seeded = true;

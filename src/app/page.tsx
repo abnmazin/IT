@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { View, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
+import { resetFirestore } from "@/lib/firestore";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import LoginPage from "@/components/LoginPage";
@@ -54,6 +55,20 @@ export default function Home() {
   );
 
   const isViewer = user?.role === "viewer";
+
+  // Sync auth user to DataContext for activity logging
+  useEffect(() => {
+    data.setAuthUser(user);
+    return () => data.setAuthUser(null);
+  }, [user]);
+
+  // Expose resetFirestore on window for console use
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__resetFirestore = resetFirestore;
+    }
+  }, []);
 
   const handleNavigate = useCallback(
     (view: View) => {
@@ -110,7 +125,10 @@ export default function Home() {
           onMenuToggle={() => setMobileMenuOpen((o) => !o)}
           currentUser={user}
           notificationCount={data.newNotificationCount}
+          recentActivity={data.activityLog}
           onLogout={logout}
+          onClearNotifications={data.clearNotifications}
+          onNavigateActivity={() => handleNavigate("activity-log")}
         />
 
         <main className="flex-1 overflow-y-auto">
@@ -130,11 +148,15 @@ export default function Home() {
             <WarehouseView
               items={data.warehouseItems}
               categories={data.categories}
+              visits={data.visits}
               readonly={isViewer}
               onAddItem={data.handleAddWarehouseItem}
               onEditItem={data.handleEditWarehouseItem}
               onDeleteItem={data.handleDeleteWarehouseItem}
               onAddCategory={data.handleAddCategory}
+              onAddItemToBox={data.handleAddItemToBox}
+              onBulkAddItemsToBox={data.handleBulkAddItemsToBox}
+              onBulkDeleteItems={data.handleBulkDeleteWarehouseItems}
             />
           )}
           {activeView === "boxes" && !selectedBoxId && (
@@ -152,6 +174,7 @@ export default function Home() {
               box={selectedBox}
               visitName={selectedVisit.name}
               categories={data.categories}
+              warehouseItems={data.warehouseItems}
               readonly={isViewer}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
@@ -207,6 +230,7 @@ export default function Home() {
               box={selectedBox}
               visitName={selectedVisit.name}
               categories={data.categories}
+              warehouseItems={data.warehouseItems}
               readonly={isViewer}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {

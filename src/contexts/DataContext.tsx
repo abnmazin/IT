@@ -46,6 +46,7 @@ interface DataContextType {
   loading: boolean;
   newNotificationCount: number;
   clearNotifications: () => void;
+  setAuthUser: (user: User | null) => void;
 
   logActivity: (type: ActivityType, description: string, details?: string, visitId?: string) => void;
 
@@ -67,6 +68,9 @@ interface DataContextType {
   handleReactivateVisit: (visitId: string) => void;
   handleFillBoxesFromTemplate: (visitId: string) => void;
   handleUpdateBoxItemQty: (visitId: string, boxId: string, warehouseItemId: string, delta: number) => void;
+  handleAddItemToBox: (visitId: string, boxId: string, warehouseItemId: string, qty: number) => void;
+  handleBulkAddItemsToBox: (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number }[]) => void;
+  handleBulkDeleteWarehouseItems: (ids: string[]) => void;
 
   handleAddUser: (name: string, role: User["role"], pin: string) => void;
   handleEditUser: (id: string, name: string, role: User["role"], pin: string) => void;
@@ -96,6 +100,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [newNotificationCount, setNewNotificationCount] = useState(0);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const prevLogLength = useRef(0);
 
   // Subscribe to Firestore
@@ -127,7 +132,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const clearNotifications = useCallback(() => setNewNotificationCount(0), []);
 
-  const currentUser = users[0] || null;
+  const setAuthUserCallback = useCallback((user: User | null) => setAuthUser(user), []);
+
+  const currentUser = authUser;
 
   const logActivity = useCallback(
     (type: ActivityType, description: string, details?: string, visitId?: string) => {
@@ -279,11 +286,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string, boxId: string, items: BoxItem[]) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
+      const itemsWithOriginal = items.map((i) => ({ ...i, originalQty: i.qty }));
       const updated: Visit = {
         ...visit,
         boxes: visit.boxes.map((b) => {
           if (b.id !== boxId) return b;
-          return { ...b, items: [...b.items, ...items] };
+          return { ...b, items: [...b.items, ...itemsWithOriginal] };
         }),
       };
       saveVisit(updated);
@@ -310,13 +318,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (b.id !== boxId) return b;
           return {
             ...b,
-            items: b.items
-              .map((bi) => {
-                const ret = returned.find((r) => r.warehouseItemId === bi.warehouseItemId);
-                if (ret) return { ...bi, qty: bi.qty - ret.qty, returnedQty: ret.qty };
-                return bi;
-              })
-              .filter((bi) => bi.qty > 0),
+              items: b.items
+                .map((bi) => {
+                  const ret = returned.find((r) => r.warehouseItemId === bi.warehouseItemId);
+                  if (ret) return { ...bi, qty: bi.qty - ret.qty, returnedQty: ret.qty };
+                  return bi;
+                }),
           };
         }),
       };
@@ -356,25 +363,134 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string, boxId: string, warehouseItemId: string, delta: number) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      const updated: Visit = {
-        ...visit,
-        boxes: visit.boxes.map((b) => {
-          if (b.id !== boxId) return b;
-          return {
-            ...b,
-            items: b.items
-              .map((bi) => {
+      if (delta > 0) {
+        const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
+        if (!whItem || whItem.totalQty < delta) return;
+        const updated: Visit = {
+          ...visit,
+          boxes: visit.boxes.map((b) => {
+            if (b.id !== boxId) return b;
+            return {
+              ...b,
+              items: b.items.map((bi) => {
                 if (bi.warehouseItemId !== warehouseItemId) return bi;
-                const newQty = bi.qty + delta;
-                return { ...bi, qty: newQty };
-              })
-              .filter((bi) => bi.qty > 0),
-          };
-        }),
-      };
-      saveVisit(updated);
+                return { ...bi, qty: bi.qty + delta, originalQty: (bi.originalQty || bi.qty) + delta };
+              }),
+            };
+          }),
+        };
+        saveVisit(updated);
+        saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty - delta });
+      } else {
+        const updated: Visit = {
+          ...visit,
+          boxes: visit.boxes.map((b) => {
+            if (b.id !== boxId) return b;
+            return {
+              ...b,
+              items: b.items.map((bi) => {
+                if (bi.warehouseItemId !== warehouseItemId) return bi;
+                return { ...bi, qty: Math.max(0, bi.qty + delta) };
+              }),
+            };
+          }),
+        };
+        saveVisit(updated);
+      }
+      const item = visit.boxes.find((b) => b.id === boxId)?.items.find((i) => i.warehouseItemId === warehouseItemId);
+      if (item) {
+        const label = delta > 0 ? "إضافة" : "نقصان";
+        logActivity("fill_box", `${label} ${Math.abs(delta)} × ${item.name} في صندوق ${visit.boxes.find((b) => b.id === boxId)?.name || ""}`, visit.name, visitId);
+      }
     },
-    [visits]
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleAddItemToBox = useCallback(
+    (visitId: string, boxId: string, warehouseItemId: string, qty: number) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
+      if (!whItem || whItem.totalQty < qty) return;
+      const box = visit.boxes.find((b) => b.id === boxId);
+      if (!box) return;
+      const existing = box.items.find((i) => i.warehouseItemId === warehouseItemId);
+      let updatedVisit: Visit;
+      if (existing) {
+        updatedVisit = {
+          ...visit,
+          boxes: visit.boxes.map((b) => {
+            if (b.id !== boxId) return b;
+            return {
+              ...b,
+              items: b.items.map((bi) => {
+                if (bi.warehouseItemId !== warehouseItemId) return bi;
+                return { ...bi, qty: bi.qty + qty, originalQty: (bi.originalQty || bi.qty) + qty };
+              }),
+            };
+          }),
+        };
+      } else {
+        const newItem: BoxItem = {
+          warehouseItemId,
+          name: whItem.name,
+          category: whItem.category,
+          serialNumber: whItem.serialNumber,
+          qty,
+          originalQty: qty,
+          consumable: whItem.consumable,
+        };
+        updatedVisit = {
+          ...visit,
+          boxes: visit.boxes.map((b) => {
+            if (b.id !== boxId) return b;
+            return { ...b, items: [...b.items, newItem] };
+          }),
+        };
+      }
+      saveVisit(updatedVisit);
+      saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty - qty });
+      logActivity("fill_box", `إضافة ${qty} × ${whItem.name} إلى ${box.name}`, visit.name, visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleBulkAddItemsToBox = useCallback(
+    (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number }[]) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      let currentBoxes = visit.boxes;
+      const warehouseUpdates: WarehouseItem[] = [];
+      for (const { warehouseItemId, qty } of items) {
+        const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
+        if (!whItem || whItem.totalQty < qty) continue;
+        warehouseUpdates.push({ ...whItem, totalQty: whItem.totalQty - qty });
+        currentBoxes = currentBoxes.map((b) => {
+          if (b.id !== boxId) return b;
+          const existing = b.items.find((i) => i.warehouseItemId === warehouseItemId);
+          if (existing) {
+            return { ...b, items: b.items.map((bi) => bi.warehouseItemId !== warehouseItemId ? bi : { ...bi, qty: bi.qty + qty, originalQty: (bi.originalQty || bi.qty) + qty }) };
+          }
+          return { ...b, items: [...b.items, { warehouseItemId, name: whItem.name, category: whItem.category, serialNumber: whItem.serialNumber, qty, originalQty: qty, consumable: whItem.consumable }] };
+        });
+      }
+      saveVisit({ ...visit, boxes: currentBoxes });
+      warehouseUpdates.forEach((wu) => saveWarehouseItem(wu));
+      const box = visit.boxes.find((b) => b.id === boxId);
+      logActivity("fill_box", `إضافة ${items.length} صنف إلى ${box?.name || "صندوق"}`, visit.name, visitId);
+    },
+    [visits, warehouseItems, logActivity]
+  );
+
+  const handleBulkDeleteWarehouseItems = useCallback(
+    (ids: string[]) => {
+      ids.forEach((id) => {
+        const item = warehouseItems.find((i) => i.id === id);
+        if (item) logActivity("delete_item", `حذف صنف من المخزن: ${item.name}`);
+        deleteWarehouseItemFS(id);
+      });
+    },
+    [warehouseItems, logActivity]
   );
 
   const handleReactivateVisit = useCallback(
@@ -473,13 +589,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider
       value={{
         warehouseItems, visits, categories, activityLog, users, loading,
-        newNotificationCount, clearNotifications,
+        newNotificationCount, clearNotifications, setAuthUser: setAuthUserCallback,
         logActivity,
         handleAddWarehouseItem, handleEditWarehouseItem, handleDeleteWarehouseItem,
         handleAddCategory, handleEditCategory, handleDeleteCategory,
         handleAddVisit, handleToggleVisit, handleCollectVisit,
         handleFillBox, handleReturnItems, handleAddBox, handleDeleteBox,
         handleReactivateVisit, handleFillBoxesFromTemplate, handleUpdateBoxItemQty,
+        handleAddItemToBox,
+        handleBulkAddItemsToBox, handleBulkDeleteWarehouseItems,
         handleAddUser, handleEditUser, handleDeleteUser, handleToggleUser,
       }}
     >

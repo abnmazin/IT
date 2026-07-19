@@ -83,6 +83,7 @@ export interface BoxItem {
   category: ItemCategory;
   serialNumber?: string;
   qty: number;
+  originalQty: number;
   consumable: boolean;
   returnedQty?: number;
   status?: "returned" | "consumed" | "missing";
@@ -162,6 +163,7 @@ export type ActivityType =
   | "return"
   | "transfer"
   | "add_item"
+  | "delete_item"
   | "add_visit"
   | "activate_visit"
   | "collect_visit"
@@ -181,6 +183,7 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   return: "إرجاع صنف",
   transfer: "نقل بين مواقع",
   add_item: "إضافة صنف",
+  delete_item: "حذف صنف",
   add_visit: "إضافة زيارة",
   activate_visit: "تفعيل زيارة",
   collect_visit: "جمع العناصر",

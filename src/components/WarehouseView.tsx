@@ -1,27 +1,35 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { WarehouseItem, Category } from "@/types";
-import { Search, Plus, Package, Tag, Edit3, Trash2, X, Minus } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { WarehouseItem, Category, Visit } from "@/types";
+import { Search, Plus, Package, Trash2, X, Minus, Send, Check } from "lucide-react";
 
 interface WarehouseViewProps {
   items: WarehouseItem[];
   categories: Category[];
+  visits: Visit[];
   readonly?: boolean;
   onAddItem: (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
   onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
   onDeleteItem: (id: string) => void;
   onAddCategory: (key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
+  onAddItemToBox: (visitId: string, boxId: string, warehouseItemId: string, qty: number) => void;
+  onBulkAddItemsToBox: (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number }[]) => void;
+  onBulkDeleteItems: (ids: string[]) => void;
 }
 
 export default function WarehouseView({
   items,
   categories,
+  visits,
   readonly = false,
   onAddItem,
   onEditItem,
   onDeleteItem,
   onAddCategory,
+  onAddItemToBox,
+  onBulkAddItemsToBox,
+  onBulkDeleteItems,
 }: WarehouseViewProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -36,6 +44,13 @@ export default function WarehouseView({
   const [catConsumable, setCatConsumable] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("All");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkSend, setShowBulkSend] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [sendVisitId, setSendVisitId] = useState("");
+  const [sendBoxId, setSendBoxId] = useState("");
+
+  const activeVisits = useMemo(() => visits.filter((v) => v.status === "active"), [visits]);
 
   const filtered = useMemo(() => {
     let result = items;
@@ -62,6 +77,26 @@ export default function WarehouseView({
     }
     return map;
   }, [filtered]);
+
+  const selectedItems = useMemo(() => items.filter((i) => selectedIds.has(i.id)), [items, selectedIds]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === filtered.length) return new Set();
+      return new Set(filtered.map((i) => i.id));
+    });
+  }, [filtered]);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const resetForm = () => {
     setFormName("");
@@ -107,6 +142,23 @@ export default function WarehouseView({
     setCatSerialTracked(false);
     setCatConsumable(false);
     setShowAddCategory(false);
+  };
+
+  const handleBulkDelete = () => {
+    onBulkDeleteItems(Array.from(selectedIds));
+    setSelectedIds(new Set());
+    setShowBulkDeleteConfirm(false);
+  };
+
+  const handleBulkSend = () => {
+    if (!sendVisitId || !sendBoxId) return;
+    const itemsToSend = selectedItems.map((item) => ({ warehouseItemId: item.id, qty: Math.min(1, item.totalQty) })).filter((i) => i.qty > 0);
+    if (itemsToSend.length === 0) return;
+    onBulkAddItemsToBox(sendVisitId, sendBoxId, itemsToSend);
+    setSelectedIds(new Set());
+    setShowBulkSend(false);
+    setSendVisitId("");
+    setSendBoxId("");
   };
 
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
@@ -215,6 +267,17 @@ export default function WarehouseView({
             <option key={c.key} value={c.key}>{c.label}</option>
           ))}
         </select>
+        {!readonly && filtered.length > 0 && (
+          <button
+            onClick={selectedIds.size === filtered.length ? clearSelection : toggleSelectAll}
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors min-h-[44px] ${
+              selectedIds.size > 0 ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            <Check className="w-4 h-4" />
+            {selectedIds.size > 0 ? `${selectedIds.size}` : "تحديد"}
+          </button>
+        )}
       </div>
 
       {showAdd && (
@@ -300,55 +363,81 @@ export default function WarehouseView({
               <span className="text-xs text-slate-400">{catItems.length} صنف · {totalInCat} قطعة</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-              {catItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`bg-white rounded-xl border p-3 sm:p-4 flex flex-col items-center text-center gap-2 min-h-[140px] justify-between ${
-                    item.totalQty === 0
-                      ? "border-red-200 bg-red-50"
-                      : item.totalQty < 5
-                      ? "border-amber-200 bg-amber-50"
-                      : "border-slate-200"
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-1 min-w-0 w-full">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                      <Package className="w-5 h-5 text-slate-500" />
-                    </div>
-                    <span className="text-sm font-bold text-slate-900 leading-tight truncate">{item.name}</span>
-                    {item.consumable && (
-                      <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">استهلاكي</span>
+              {catItems.map((item) => {
+                const isSelected = selectedIds.has(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => !readonly && toggleSelect(item.id)}
+                    className={`bg-white rounded-xl border p-3 sm:p-4 flex flex-col items-center text-center gap-2 min-h-[140px] justify-between cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-sky-400 bg-sky-50 ring-2 ring-sky-200"
+                        : item.totalQty === 0
+                        ? "border-red-200 bg-red-50"
+                        : item.totalQty < 5
+                        ? "border-amber-200 bg-amber-50"
+                        : "border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    {!readonly && (
+                      <div className="absolute top-2 left-2">
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                          isSelected ? "bg-sky-500 border-sky-500" : "border-slate-300 bg-white"
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                      </div>
                     )}
-                    {item.serialNumber && (
-                      <span className="text-[10px] text-sky-600 font-mono truncate max-w-full">{item.serialNumber}</span>
+                    <div className="flex flex-col items-center gap-1 min-w-0 w-full">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-slate-500" />
+                      </div>
+                      <span className="text-sm font-bold text-slate-900 leading-tight truncate">{item.name}</span>
+                      {item.consumable && (
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">استهلاكي</span>
+                      )}
+                      {item.serialNumber && (
+                        <span className="text-[10px] text-sky-600 font-mono truncate max-w-full">{item.serialNumber}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 w-full justify-center">
+                      <span className={`text-lg font-bold ${
+                        item.totalQty === 0 ? "text-red-600" : item.totalQty < 5 ? "text-amber-600" : "text-emerald-600"
+                      }`}>
+                        {item.totalQty}
+                      </span>
+                      <span className="text-[10px] text-slate-400">قطعة</span>
+                    </div>
+                    {!readonly && (
+                      <div className="flex gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
+                        {activeVisits.length > 0 && (
+                          <button
+                            onClick={() => {
+                              onAddItemToBox(activeVisits[0].id, activeVisits[0].boxes[0]?.id || "", item.id, Math.min(1, item.totalQty));
+                            }}
+                            className="flex-1 py-2.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center gap-1"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            إرسال
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEdit(item)}
+                          className="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center"
+                        >
+                          تعديل
+                        </button>
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="py-2.5 px-3 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors min-h-[44px] flex items-center justify-center"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 w-full justify-center">
-                    <span className={`text-lg font-bold ${
-                      item.totalQty === 0 ? "text-red-600" : item.totalQty < 5 ? "text-amber-600" : "text-emerald-600"
-                    }`}>
-                      {item.totalQty}
-                    </span>
-                    <span className="text-[10px] text-slate-400">قطعة</span>
-                  </div>
-                  {!readonly && (
-                    <div className="flex gap-1.5 w-full">
-                      <button
-                        onClick={() => openEdit(item)}
-                        className="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center"
-                      >
-                        تعديل
-                      </button>
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="py-2.5 px-3 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors min-h-[44px] flex items-center justify-center"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
@@ -357,6 +446,109 @@ export default function WarehouseView({
         <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
           <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-400">لا توجد عناصر في المخزن.</p>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && !readonly && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 max-w-[95vw]">
+          <span className="text-sm font-bold whitespace-nowrap">{selectedIds.size} محدد</span>
+          <div className="w-px h-6 bg-slate-700" />
+          {activeVisits.length > 0 && (
+            <button
+              onClick={() => { setSendVisitId(""); setSendBoxId(""); setShowBulkSend(true); }}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-medium hover:bg-emerald-700 transition-colors min-h-[44px]"
+            >
+              <Send className="w-3.5 h-3.5" />
+              إرسال
+            </button>
+          )}
+          <button
+            onClick={() => setShowBulkDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-red-600 text-white rounded-xl text-xs font-medium hover:bg-red-700 transition-colors min-h-[44px]"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            حذف
+          </button>
+          <button
+            onClick={clearSelection}
+            className="p-2.5 rounded-xl bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowBulkDeleteConfirm(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-900">تأكيد الحذف</h3>
+            <p className="text-sm text-slate-600">هل أنت متأكد من حذف {selectedIds.size} صنف من المخزن؟</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                حذف الكل
+              </button>
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkSend && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowBulkSend(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900">إرسال {selectedIds.size} صنف إلى صندوق</h3>
+              <button onClick={() => setShowBulkSend(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 max-h-32 overflow-y-auto space-y-1">
+              {selectedItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-2 text-xs text-slate-700">
+                  <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">{item.name}</span>
+                  <span className="text-slate-400 shrink-0">({item.totalQty})</span>
+                </div>
+              ))}
+            </div>
+            <select
+              value={sendVisitId}
+              onChange={(e) => { setSendVisitId(e.target.value); setSendBoxId(""); }}
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">اختر الزيارة</option>
+              {activeVisits.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+            {sendVisitId && (
+              <select
+                value={sendBoxId}
+                onChange={(e) => setSendBoxId(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">اختر الصندوق</option>
+                {activeVisits.find((v) => v.id === sendVisitId)?.boxes.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
+            <button
+              disabled={!sendVisitId || !sendBoxId}
+              onClick={handleBulkSend}
+              className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              إرسال {selectedIds.size} صنف
+            </button>
+          </div>
         </div>
       )}
     </div>
