@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Code2,
 } from "lucide-react";
 
 const allNavItems: { id: View; label: string; icon: React.ElementType; roles: UserRole[] }[] = [
@@ -37,6 +38,7 @@ interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
   userRole: UserRole;
+  isDeveloper?: boolean;
 }
 
 export default function Sidebar({
@@ -47,6 +49,7 @@ export default function Sidebar({
   mobileOpen,
   onMobileClose,
   userRole,
+  isDeveloper = false,
 }: SidebarProps) {
   const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
   const bottomItems = allBottomItems.filter((item) => item.roles.includes(userRole));
@@ -135,6 +138,27 @@ export default function Sidebar({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {isDeveloper && (
+          <div className="px-2 pb-1 space-y-1 border-t border-slate-700/50 pt-2">
+            <button
+              onClick={() => onNavigate("developer")}
+              className={`w-full flex items-center gap-3 rounded-lg text-sm transition-colors ${
+                collapsed ? "justify-center px-2 h-11" : "px-3 h-11"
+              } ${
+                activeView === "developer"
+                  ? "bg-purple-500/20 text-purple-400"
+                  : "text-sidebar-text hover:bg-sidebar-hover hover:text-slate-200"
+              }`}
+              title={collapsed ? "المطور" : undefined}
+            >
+              <Code2 className="w-[18px] h-[18px] shrink-0" />
+              {!collapsed && (
+                <span className="whitespace-nowrap">المطور</span>
+              )}
+            </button>
           </div>
         )}
 

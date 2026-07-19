@@ -112,7 +112,8 @@ export type View =
   | "completed-visits"
   | "users"
   | "categories-settings"
-  | "activity-log";
+  | "activity-log"
+  | "developer";
 
 export type UserRole = "admin" | "member" | "viewer";
 

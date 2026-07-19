@@ -59,6 +59,7 @@ interface DataContextType {
   handleDeleteCategory: (id: string) => void;
 
   handleAddVisit: (name: string, date: string, hijriDate?: string) => void;
+  handleDeleteVisit: (visitId: string) => void;
   handleToggleVisit: (visitId: string) => void;
   handleCollectVisit: (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => void;
   handleFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
@@ -493,6 +494,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [warehouseItems, logActivity]
   );
 
+  const handleDeleteVisit = useCallback(
+    (visitId: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (visit) logActivity("complete_visit", `حذف زيارة: ${visit.name}`);
+      deleteVisitFS(visitId);
+    },
+    [visits, logActivity]
+  );
+
   const handleReactivateVisit = useCallback(
     (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
@@ -593,7 +603,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         logActivity,
         handleAddWarehouseItem, handleEditWarehouseItem, handleDeleteWarehouseItem,
         handleAddCategory, handleEditCategory, handleDeleteCategory,
-        handleAddVisit, handleToggleVisit, handleCollectVisit,
+        handleAddVisit, handleDeleteVisit, handleToggleVisit, handleCollectVisit,
         handleFillBox, handleReturnItems, handleAddBox, handleDeleteBox,
         handleReactivateVisit, handleFillBoxesFromTemplate, handleUpdateBoxItemQty,
         handleAddItemToBox,

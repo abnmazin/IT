@@ -19,9 +19,10 @@ import CompletedVisitsView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
 import ActivityLogView from "@/components/ActivityLogView";
+import DeveloperSettings from "@/components/DeveloperSettings";
 
 const ROLE_ALLOWED_VIEWS: Record<UserRole, View[]> = {
-  admin: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log"],
+  admin: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log", "developer"],
   member: ["dashboard", "warehouse", "boxes", "visits", "completed-visits"],
   viewer: ["warehouse", "boxes"],
 };
@@ -54,6 +55,7 @@ export default function Home() {
   );
 
   const isViewer = user?.role === "viewer";
+  const isDeveloper = user?.name === "abnmazin" && user?.role === "admin";
 
   // Sync auth user to DataContext for activity logging
   useEffect(() => {
@@ -105,6 +107,7 @@ export default function Home() {
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
         userRole={user.role}
+        isDeveloper={isDeveloper}
       />
 
       <div
@@ -182,6 +185,7 @@ export default function Home() {
               onToggleVisit={data.handleToggleVisit}
               onReactivateVisit={data.handleReactivateVisit}
               onFillBoxes={data.handleFillBoxesFromTemplate}
+              onDeleteVisit={data.handleDeleteVisit}
             />
           )}
           {activeView === "visits" && selectedVisit && !selectedBoxId && selectedVisit.status !== "collecting" && selectedVisit.status !== "completed" && (
@@ -267,6 +271,12 @@ export default function Home() {
               </div>
               <ActivityLogView activityLog={data.activityLog} visits={data.visits} />
             </div>
+          )}
+          {activeView === "developer" && isDeveloper && (
+            <DeveloperSettings
+              onBulkDeleteWarehouseItems={data.handleBulkDeleteWarehouseItems}
+              warehouseItemCount={data.warehouseItems.length}
+            />
           )}
         </main>
       </div>
