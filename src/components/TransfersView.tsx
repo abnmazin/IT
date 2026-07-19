@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Visit, Category } from "@/types";
 import { CheckCircle, Package, Tag, Calendar, ChevronDown, ChevronUp, AlertTriangle, FileSpreadsheet } from "lucide-react";
-import { exportVisitReportToExcel } from "@/lib/exportExcel";
+import { exportVisitReportToExcel, exportBoxToExcel } from "@/lib/exportExcel";
 
 interface CompletedVisitsViewProps {
   visits: Visit[];
@@ -118,10 +118,19 @@ export default function CompletedVisitsView({ visits, categories, onSelectVisit 
                             <Package className="w-4 h-4 text-slate-400" />
                             <span className="text-sm font-medium text-slate-700">{box.name}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-[11px]">
-                            {boxReturned > 0 && <span className="text-emerald-600">{boxReturned} عاد</span>}
-                            {boxConsumed > 0 && <span className="text-amber-600">{boxConsumed} استُهلك</span>}
-                            {boxMissing > 0 && <span className="text-red-600">{boxMissing} مفقود</span>}
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 text-[11px]">
+                              {boxReturned > 0 && <span className="text-emerald-600">{boxReturned} عاد</span>}
+                              {boxConsumed > 0 && <span className="text-amber-600">{boxConsumed} استُهلك</span>}
+                              {boxMissing > 0 && <span className="text-red-600">{boxMissing} مفقود</span>}
+                            </div>
+                            <button
+                              onClick={() => exportBoxToExcel(box, visit.name, categories)}
+                              className="p-1.5 rounded-md hover:bg-emerald-100 text-emerald-500 hover:text-emerald-600 transition-colors"
+                              title="تصدير الصندوق"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
                         <div className="divide-y divide-slate-50">
