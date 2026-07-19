@@ -61,6 +61,7 @@ interface DataContextType {
   handleAddVisit: (name: string, date: string, hijriDate?: string) => void;
   handleDeleteVisit: (visitId: string) => void;
   handleToggleVisit: (visitId: string) => void;
+  handleActivateVisit: (visitId: string, year: string, hijriDate: string) => void;
   handleCollectVisit: (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => void;
   handleFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
   handleReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
@@ -191,7 +192,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const item = warehouseItems.find((i) => i.id === id);
       deleteWarehouseItemFS(id);
-      if (item) logActivity("add_item", `حذف صنف من المخزن: ${item.name}`);
+      if (item) logActivity("delete_item", `حذف صنف من المخزن: ${item.name}`);
     },
     [warehouseItems, logActivity]
   );
@@ -257,6 +258,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
         undefined,
         visitId
       );
+    },
+    [visits, logActivity]
+  );
+
+  const handleActivateVisit = useCallback(
+    (visitId: string, year: string, hijriDate: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      saveVisit({ ...visit, status: "active", year: year || undefined, hijriDate: hijriDate || undefined });
+      logActivity("activate_visit", `تفعيل زيارة: ${visit.name} — ${year}`, undefined, visitId);
     },
     [visits, logActivity]
   );
@@ -485,11 +496,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const handleBulkDeleteWarehouseItems = useCallback(
     (ids: string[]) => {
+      const names: string[] = [];
       ids.forEach((id) => {
         const item = warehouseItems.find((i) => i.id === id);
-        if (item) logActivity("delete_item", `حذف صنف من المخزن: ${item.name}`);
+        if (item) names.push(item.name);
         deleteWarehouseItemFS(id);
       });
+      if (names.length > 0) {
+        if (names.length === 1) {
+          logActivity("delete_item", `حذف صنف من المخزن: ${names[0]}`);
+        } else {
+          logActivity("delete_item", `حذف ${names.length} أصناف من المخزن: ${names[0]} و ${names.length - 1} أخرى`);
+        }
+      }
     },
     [warehouseItems, logActivity]
   );
@@ -603,7 +622,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         logActivity,
         handleAddWarehouseItem, handleEditWarehouseItem, handleDeleteWarehouseItem,
         handleAddCategory, handleEditCategory, handleDeleteCategory,
-        handleAddVisit, handleDeleteVisit, handleToggleVisit, handleCollectVisit,
+        handleAddVisit, handleDeleteVisit, handleToggleVisit, handleActivateVisit, handleCollectVisit,
         handleFillBox, handleReturnItems, handleAddBox, handleDeleteBox,
         handleReactivateVisit, handleFillBoxesFromTemplate, handleUpdateBoxItemQty,
         handleAddItemToBox,

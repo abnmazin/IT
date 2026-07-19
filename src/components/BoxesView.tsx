@@ -14,7 +14,6 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
   const [search, setSearch] = useState("");
 
   const activeVisit = visits.find((v) => v.status === "active");
-  const activeVisit2 = visits.find((v) => v.status === "active");
   const collectingVisit = visits.find((v) => v.status === "collecting");
   const currentVisit = collectingVisit || activeVisit;
 

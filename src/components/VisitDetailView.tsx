@@ -12,6 +12,7 @@ interface VisitDetailViewProps {
   onBack: () => void;
   onSelectBox: (boxId: string) => void;
   onToggleVisit: (visitId: string) => void;
+  onActivateVisit: (visitId: string, year: string, hijriDate: string) => void;
   onFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
   onReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
   onAddBox: (visitId: string, name: string, label: string) => void;
@@ -42,6 +43,7 @@ export default function VisitDetailView({
   onBack,
   onSelectBox,
   onToggleVisit,
+  onActivateVisit,
   onAddBox,
   onDeleteBox,
   onStartCollect,
@@ -49,6 +51,7 @@ export default function VisitDetailView({
   const [showAddBox, setShowAddBox] = useState(false);
   const [showActivateConfirm, setShowActivateConfirm] = useState(false);
   const [activateYear, setActivateYear] = useState(new Date().getFullYear().toString());
+  const [activateHijri, setActivateHijri] = useState("");
   const [boxName, setBoxName] = useState("");
   const [boxLabel, setBoxLabel] = useState("");
   const [showActivity, setShowActivity] = useState(false);
@@ -135,15 +138,7 @@ export default function VisitDetailView({
               </button>
             </>
           )}
-          {isCompleted && (
-            <button
-              onClick={() => onToggleVisit(visit.id)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-sky-50 text-sky-600 rounded-xl text-sm font-medium hover:bg-sky-100 transition-colors min-h-[44px] active:scale-95"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">إعادة</span>
-            </button>
-          )}
+          {isCompleted && null}
         </div>
       </div>
 
@@ -172,6 +167,8 @@ export default function VisitDetailView({
               <label className="text-[11px] font-medium text-slate-500 mb-1 block">التاريخ الهجري (اختياري)</label>
               <input
                 type="text"
+                value={activateHijri}
+                onChange={(e) => setActivateHijri(e.target.value)}
                 placeholder="مثال: 1448 شوال"
                 className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
               />
@@ -179,7 +176,7 @@ export default function VisitDetailView({
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => { onToggleVisit(visit.id); setShowActivateConfirm(false); }}
+              onClick={() => { onActivateVisit(visit.id, activateYear, activateHijri); setShowActivateConfirm(false); }}
               className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 min-h-[44px]"
             >
               تفعيل

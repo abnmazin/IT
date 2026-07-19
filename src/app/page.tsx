@@ -194,6 +194,7 @@ export default function Home() {
               onBack={() => setSelectedVisitId(null)}
               onSelectBox={setSelectedBoxId}
               onToggleVisit={data.handleToggleVisit}
+              onActivateVisit={data.handleActivateVisit}
               onFillBox={data.handleFillBox}
               onReturnItems={data.handleReturnItems}
               onAddBox={data.handleAddBox}
@@ -228,6 +229,8 @@ export default function Home() {
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
                 data.handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
               }}
+              onAddItemToBox={data.handleAddItemToBox}
+              visitId={selectedVisit.id}
             />
           )}
           {activeView === "completed-visits" && (
