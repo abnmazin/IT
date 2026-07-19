@@ -8,6 +8,7 @@ interface BoxDetailViewProps {
   box: Box;
   visitName: string;
   categories: Category[];
+  readonly?: boolean;
   onBack: () => void;
   onUpdateItemQty: (boxId: string, warehouseItemId: string, delta: number) => void;
 }
@@ -16,6 +17,7 @@ export default function BoxDetailView({
   box,
   visitName,
   categories,
+  readonly = false,
   onBack,
   onUpdateItemQty,
 }: BoxDetailViewProps) {
@@ -88,27 +90,36 @@ export default function BoxDetailView({
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => handleDelta(item.warehouseItemId, item.qty, -1)}
-                      disabled={qty <= 0}
-                      className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 disabled:opacity-30 transition-colors"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className={`w-8 text-center text-sm font-bold ${
+                  {!readonly && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleDelta(item.warehouseItemId, item.qty, -1)}
+                        disabled={qty <= 0}
+                        className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 disabled:opacity-30 transition-colors"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className={`w-8 text-center text-sm font-bold ${
+                        qty === 0 ? "text-red-500" : qty < item.qty ? "text-amber-600" : "text-slate-900"
+                      }`}>
+                        {qty}
+                      </span>
+                      <button
+                        onClick={() => handleDelta(item.warehouseItemId, item.qty, 1)}
+                        disabled={qty >= item.qty}
+                        className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                  {readonly && (
+                    <span className={`text-sm font-bold ${
                       qty === 0 ? "text-red-500" : qty < item.qty ? "text-amber-600" : "text-slate-900"
                     }`}>
                       {qty}
                     </span>
-                    <button
-                      onClick={() => handleDelta(item.warehouseItemId, item.qty, 1)}
-                      disabled={qty >= item.qty}
-                      className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30 transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  )}
                 </div>
               );
             })}

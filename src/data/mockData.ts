@@ -319,10 +319,10 @@ export const initialVisits: Visit[] = [
 ];
 
 export const initialUsers: User[] = [
-  { id: "user-1", name: "أحمد محمد", email: "ahmed@company.com", role: "admin", pin: "1234", active: true },
-  { id: "user-2", name: "سارة العلي", email: "sara@company.com", role: "technician", pin: "1234", active: true },
-  { id: "user-3", name: "خالد الشمري", email: "khalid@company.com", role: "technician", pin: "1234", active: true },
-  { id: "user-4", name: "نورة الحربي", email: "noura@company.com", role: "viewer", pin: "1234", active: true },
+  { id: "user-1", name: "أحمد محمد", role: "admin", pin: "1234", active: true },
+  { id: "user-2", name: "سارة العلي", role: "member", pin: "1234", active: true },
+  { id: "user-3", name: "خالد الشمري", role: "member", pin: "1234", active: true },
+  { id: "user-4", name: "نورة الحربي", role: "viewer", pin: "1234", active: true },
 ];
 
 export const initialActivityLog: ActivityLogEntry[] = [

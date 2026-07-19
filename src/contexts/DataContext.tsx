@@ -68,8 +68,8 @@ interface DataContextType {
   handleFillBoxesFromTemplate: (visitId: string) => void;
   handleUpdateBoxItemQty: (visitId: string, boxId: string, warehouseItemId: string, delta: number) => void;
 
-  handleAddUser: (name: string, email: string, role: User["role"], pin: string) => void;
-  handleEditUser: (id: string, name: string, email: string, role: User["role"], pin: string) => void;
+  handleAddUser: (name: string, role: User["role"], pin: string) => void;
+  handleEditUser: (id: string, name: string, role: User["role"], pin: string) => void;
   handleDeleteUser: (id: string) => void;
   handleToggleUser: (id: string) => void;
 }
@@ -436,8 +436,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // ── Users ─────────────────────────────────────────
   const handleAddUser = useCallback(
-    (name: string, email: string, role: User["role"], pin: string) => {
-      const user: User = { id: `user-${Date.now()}`, name, email, role, pin, active: true };
+    (name: string, role: User["role"], pin: string) => {
+      const user: User = { id: `user-${Date.now()}`, name, role, pin, active: true };
       saveUser(user);
       logActivity("add_user", `إضافة مستخدم جديد: ${name}`, `الدور: ${role}`);
     },
@@ -445,9 +445,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const handleEditUser = useCallback(
-    (id: string, name: string, email: string, role: User["role"], pin: string) => {
+    (id: string, name: string, role: User["role"], pin: string) => {
       const user = users.find((u) => u.id === id);
-      if (user) saveUser({ ...user, name, email, role, pin });
+      if (user) saveUser({ ...user, name, role, pin });
     },
     [users]
   );

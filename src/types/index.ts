@@ -113,18 +113,17 @@ export type View =
   | "categories-settings"
   | "activity-log";
 
-export type UserRole = "admin" | "technician" | "viewer";
+export type UserRole = "admin" | "member" | "viewer";
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  admin: "مدير",
-  technician: "فني",
+  admin: "ادمن",
+  member: "عضو",
   viewer: "مشاهد",
 };
 
 export interface User {
   id: string;
   name: string;
-  email: string;
   role: UserRole;
   pin: string;
   active: boolean;

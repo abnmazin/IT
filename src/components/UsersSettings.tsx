@@ -6,15 +6,15 @@ import { Plus, Edit2, Trash2, X, UserCheck, UserX } from "lucide-react";
 
 interface UsersSettingsProps {
   users: User[];
-  onAdd: (name: string, email: string, role: UserRole, pin: string) => void;
-  onEdit: (id: string, name: string, email: string, role: UserRole, pin: string) => void;
+  onAdd: (name: string, role: UserRole, pin: string) => void;
+  onEdit: (id: string, name: string, role: UserRole, pin: string) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
 }
 
 const ROLE_BADGE: Record<UserRole, string> = {
   admin: "bg-purple-100 text-purple-700",
-  technician: "bg-sky-100 text-sky-700",
+  member: "bg-sky-100 text-sky-700",
   viewer: "bg-slate-100 text-slate-600",
 };
 
@@ -28,15 +28,13 @@ export default function UsersSettings({
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>("technician");
+  const [role, setRole] = useState<UserRole>("member");
   const [pin, setPin] = useState("");
 
   const openAdd = () => {
     setEditingUser(null);
     setName("");
-    setEmail("");
-    setRole("technician");
+    setRole("member");
     setPin("");
     setShowModal(true);
   };
@@ -44,7 +42,6 @@ export default function UsersSettings({
   const openEdit = (user: User) => {
     setEditingUser(user);
     setName(user.name);
-    setEmail(user.email);
     setRole(user.role);
     setPin(user.pin || "");
     setShowModal(true);
@@ -52,11 +49,11 @@ export default function UsersSettings({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !pin.trim()) return;
+    if (!name.trim() || !pin.trim()) return;
     if (editingUser) {
-      onEdit(editingUser.id, name.trim(), email.trim(), role, pin.trim());
+      onEdit(editingUser.id, name.trim(), role, pin.trim());
     } else {
-      onAdd(name.trim(), email.trim(), role, pin.trim());
+      onAdd(name.trim(), role, pin.trim());
     }
     setShowModal(false);
   };
@@ -89,7 +86,6 @@ export default function UsersSettings({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">المستخدم</th>
-                <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">البريد</th>
                 <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">الدور</th>
                 <th className="text-right text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">الحالة</th>
                 <th className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider px-5 py-3">إجراءات</th>
@@ -101,7 +97,6 @@ export default function UsersSettings({
                   <td className="px-5 py-3">
                     <p className="text-sm font-medium text-slate-800">{user.name}</p>
                   </td>
-                  <td className="px-5 py-3 text-sm text-slate-500" dir="ltr">{user.email}</td>
                   <td className="px-5 py-3">
                     <span className={`text-xs font-medium px-2 py-1 rounded-md ${ROLE_BADGE[user.role]}`}>
                       {USER_ROLE_LABELS[user.role]}
@@ -149,7 +144,6 @@ export default function UsersSettings({
               <div className="flex items-start justify-between mb-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-slate-900 truncate">{user.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate" dir="ltr">{user.email}</p>
                 </div>
                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded shrink-0 mr-2 ${ROLE_BADGE[user.role]}`}>
                   {USER_ROLE_LABELS[user.role]}
@@ -214,17 +208,6 @@ export default function UsersSettings({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">البريد الإلكتروني *</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@company.com"
-                  className="w-full h-11 px-3 rounded-lg border border-slate-200 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400"
-                  dir="ltr"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">رمز الدخول (PIN) *</label>
                 <input
                   type="password"
@@ -260,7 +243,7 @@ export default function UsersSettings({
               <div className="flex gap-3 pt-2 pb-2">
                 <button
                   type="submit"
-                  disabled={!name.trim() || !email.trim() || !pin.trim()}
+                  disabled={!name.trim() || !pin.trim()}
                   className="flex-1 h-11 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   {editingUser ? "حفظ التعديلات" : "إضافة"}

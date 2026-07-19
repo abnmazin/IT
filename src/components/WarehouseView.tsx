@@ -7,6 +7,7 @@ import { Search, Plus, Package, Tag, Edit3, Trash2, X, Minus } from "lucide-reac
 interface WarehouseViewProps {
   items: WarehouseItem[];
   categories: Category[];
+  readonly?: boolean;
   onAddItem: (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
   onEditItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
   onDeleteItem: (id: string) => void;
@@ -16,6 +17,7 @@ interface WarehouseViewProps {
 export default function WarehouseView({
   items,
   categories,
+  readonly = false,
   onAddItem,
   onEditItem,
   onDeleteItem,
@@ -119,22 +121,26 @@ export default function WarehouseView({
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => { setShowAddCategory(!showAddCategory); setShowAdd(false); }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              showAddCategory ? "bg-violet-100 text-violet-700" : "bg-violet-50 text-violet-600 hover:bg-violet-100"
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>إضافة فئة</span>
-          </button>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-medium hover:bg-sky-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>إضافة صنف</span>
-          </button>
+          {!readonly && (
+            <>
+              <button
+                onClick={() => { setShowAddCategory(!showAddCategory); setShowAdd(false); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  showAddCategory ? "bg-violet-100 text-violet-700" : "bg-violet-50 text-violet-600 hover:bg-violet-100"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>إضافة فئة</span>
+              </button>
+              <button
+                onClick={openAdd}
+                className="flex items-center gap-2 px-4 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-medium hover:bg-sky-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>إضافة صنف</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -325,20 +331,22 @@ export default function WarehouseView({
                     </span>
                     <span className="text-[10px] text-slate-400">قطعة</span>
                   </div>
-                  <div className="flex gap-1.5 w-full">
-                    <button
-                      onClick={() => openEdit(item)}
-                      className="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center"
-                    >
-                      تعديل
-                    </button>
-                    <button
-                      onClick={() => onDeleteItem(item.id)}
-                      className="py-2.5 px-3 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors min-h-[44px] flex items-center justify-center"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {!readonly && (
+                    <div className="flex gap-1.5 w-full">
+                      <button
+                        onClick={() => openEdit(item)}
+                        className="flex-1 py-2.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-sky-100 hover:text-sky-700 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center"
+                      >
+                        تعديل
+                      </button>
+                      <button
+                        onClick={() => onDeleteItem(item.id)}
+                        className="py-2.5 px-3 rounded-lg bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 transition-colors min-h-[44px] flex items-center justify-center"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

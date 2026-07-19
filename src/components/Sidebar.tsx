@@ -1,6 +1,6 @@
 "use client";
 
-import { View } from "@/types";
+import { View, UserRole } from "@/types";
 import {
   LayoutDashboard,
   Warehouse,
@@ -15,18 +15,18 @@ import {
   X,
 } from "lucide-react";
 
-const navItems: { id: View; label: string; icon: React.ElementType }[] = [
-  { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
-  { id: "warehouse", label: "المخزن", icon: Warehouse },
-  { id: "boxes", label: "الصناديق", icon: Package },
-  { id: "visits", label: "الزيارات", icon: MapPin },
-  { id: "completed-visits", label: "الزيارات المكتملة", icon: CheckCircle },
+const allNavItems: { id: View; label: string; icon: React.ElementType; roles: UserRole[] }[] = [
+  { id: "dashboard", label: "لوحة التحكم", icon: LayoutDashboard, roles: ["admin", "member"] },
+  { id: "warehouse", label: "المخزن", icon: Warehouse, roles: ["admin", "member", "viewer"] },
+  { id: "boxes", label: "الصناديق", icon: Package, roles: ["admin", "member", "viewer"] },
+  { id: "visits", label: "الزيارات", icon: MapPin, roles: ["admin", "member"] },
+  { id: "completed-visits", label: "الزيارات المكتملة", icon: CheckCircle, roles: ["admin", "member"] },
 ];
 
-const bottomItems: { id: View; label: string; icon: React.ElementType }[] = [
-  { id: "users", label: "المستخدمين", icon: Users },
-  { id: "categories-settings", label: "الفئات", icon: Tag },
-  { id: "activity-log", label: "سجل النشاط", icon: ClipboardList },
+const allBottomItems: { id: View; label: string; icon: React.ElementType; roles: UserRole[] }[] = [
+  { id: "users", label: "المستخدمين", icon: Users, roles: ["admin"] },
+  { id: "categories-settings", label: "الفئات", icon: Tag, roles: ["admin"] },
+  { id: "activity-log", label: "سجل النشاط", icon: ClipboardList, roles: ["admin"] },
 ];
 
 interface SidebarProps {
@@ -36,6 +36,7 @@ interface SidebarProps {
   onToggle: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
+  userRole: UserRole;
 }
 
 export default function Sidebar({
@@ -45,7 +46,11 @@ export default function Sidebar({
   onToggle,
   mobileOpen,
   onMobileClose,
+  userRole,
 }: SidebarProps) {
+  const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
+  const bottomItems = allBottomItems.filter((item) => item.roles.includes(userRole));
+
   return (
     <>
       {mobileOpen && (
@@ -105,31 +110,33 @@ export default function Sidebar({
           })}
         </nav>
 
-        <div className="px-2 pb-1 space-y-1 border-t border-slate-700/50 pt-2">
-          {bottomItems.map((item) => {
-            const Icon = item.icon;
-            const active = activeView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onNavigate(item.id)}
-                className={`w-full flex items-center gap-3 rounded-lg text-sm transition-colors ${
-                  collapsed ? "justify-center px-2 h-11" : "px-3 h-11"
-                } ${
-                  active
-                    ? "bg-sidebar-active text-white"
-                    : "text-sidebar-text hover:bg-sidebar-hover hover:text-slate-200"
-                }`}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon className="w-[18px] h-[18px] shrink-0" />
-                {!collapsed && (
-                  <span className="whitespace-nowrap">{item.label}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {bottomItems.length > 0 && (
+          <div className="px-2 pb-1 space-y-1 border-t border-slate-700/50 pt-2">
+            {bottomItems.map((item) => {
+              const Icon = item.icon;
+              const active = activeView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id)}
+                  className={`w-full flex items-center gap-3 rounded-lg text-sm transition-colors ${
+                    collapsed ? "justify-center px-2 h-11" : "px-3 h-11"
+                  } ${
+                    active
+                      ? "bg-sidebar-active text-white"
+                      : "text-sidebar-text hover:bg-sidebar-hover hover:text-slate-200"
+                  }`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Icon className="w-[18px] h-[18px] shrink-0" />
+                  {!collapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <button
           onClick={onToggle}

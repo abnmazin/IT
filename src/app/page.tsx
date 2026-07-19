@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { View } from "@/types";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { View, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
 import Sidebar from "@/components/Sidebar";
@@ -19,6 +19,12 @@ import CompletedVisitsView from "@/components/TransfersView";
 import SettingsView from "@/components/SettingsView";
 import CategoriesSettings from "@/components/CategoriesSettings";
 import ActivityLogView from "@/components/ActivityLogView";
+
+const ROLE_ALLOWED_VIEWS: Record<UserRole, View[]> = {
+  admin: ["dashboard", "warehouse", "boxes", "visits", "completed-visits", "users", "categories-settings", "activity-log"],
+  member: ["dashboard", "warehouse", "boxes", "visits", "completed-visits"],
+  viewer: ["warehouse", "boxes"],
+};
 
 export default function Home() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -47,6 +53,8 @@ export default function Home() {
     0
   );
 
+  const isViewer = user?.role === "viewer";
+
   const handleNavigate = useCallback(
     (view: View) => {
       setActiveView(view);
@@ -56,6 +64,15 @@ export default function Home() {
     },
     []
   );
+
+  // Guard: redirect to first allowed view if current view is not allowed
+  useEffect(() => {
+    if (user && !ROLE_ALLOWED_VIEWS[user.role].includes(activeView)) {
+      setActiveView(ROLE_ALLOWED_VIEWS[user.role][0]);
+      setSelectedVisitId(null);
+      setSelectedBoxId(null);
+    }
+  }, [user, activeView]);
 
   if (authLoading || data.loading) {
     return (
@@ -81,6 +98,7 @@ export default function Home() {
         onToggle={() => setSidebarCollapsed((c) => !c)}
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
+        userRole={user.role}
       />
 
       <div
@@ -112,6 +130,7 @@ export default function Home() {
             <WarehouseView
               items={data.warehouseItems}
               categories={data.categories}
+              readonly={isViewer}
               onAddItem={data.handleAddWarehouseItem}
               onEditItem={data.handleEditWarehouseItem}
               onDeleteItem={data.handleDeleteWarehouseItem}
@@ -133,6 +152,7 @@ export default function Home() {
               box={selectedBox}
               visitName={selectedVisit.name}
               categories={data.categories}
+              readonly={isViewer}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
                 data.handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
@@ -187,6 +207,7 @@ export default function Home() {
               box={selectedBox}
               visitName={selectedVisit.name}
               categories={data.categories}
+              readonly={isViewer}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
                 data.handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
