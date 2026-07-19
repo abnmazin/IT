@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-18] — Mock Completed Visits + Dashboard Chart
+
+### Added
+- **4 completed visits** in mock data with realistic item statuses:
+  - زيارة كربلاء — عاشوراء 1446 (15 items: 8 returned, 3 consumed, 1 missing)
+  - زيارة النجف — النصف شعبان (13 items: all returned)
+  - زيارة سامراء — زيارة آدمية (9 items: 6 returned, 3 consumed)
+  - زيارة كربلاء — أربعين 1445 (18 items: 12 returned, 4 consumed, 1 missing)
+- **Summary totals grid**: Returned/consumed/missing counts with percentages
+- **Per-visit percentages** shown below each stacked bar
+
+### Changed
+- Dashboard chart sorted chronologically (oldest first)
+- Each visit bar shows year + hijri date
+- Removed `activityLog` prop from DashboardView
+
+### Removed
+- **Recent activity section** from DashboardView
+
+### Build
+- Build passes: 24 kB page / 111 kB first load
+
+---
+
 ## [2026-07-18] — Mobile Responsive: Users + Categories Pages
 
 ### Fixed
