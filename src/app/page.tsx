@@ -539,9 +539,8 @@ export default function Home() {
               totalWarehouseItems={warehouseItems.length}
               totalWarehouseQty={totalWarehouseQty}
               activeVisitCount={activeVisitCount}
-              totalBoxItems={totalBoxItems}
+                             totalBoxItems={totalBoxItems}
               visits={visits}
-              activityLog={activityLog}
               onNavigateToWarehouse={() => handleNavigate("warehouse")}
               onNavigateToVisits={() => handleNavigate("visits")}
               onNavigateToBoxes={() => handleNavigate("boxes")}
