@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2026-07-18] — Mobile Responsive: Users + Categories Pages
+
+### Fixed
+- **UsersSettings**: Desktop table hidden on mobile, replaced with card-based layout showing name/email/role badges + action buttons
+- **CategoriesSettings**: Desktop grid hidden on mobile, replaced with card-based layout showing key/name/type badges + action buttons
+- **Both modals**: Bottom-sheet style on mobile (slide up from bottom), sticky header, scrollable content, 44px touch targets
+
+### Build
+- Build passes: 22.9 kB page / 110 kB first load
+
+---
+
 ## [2026-07-18] — Reactivation Fix + Fill Button + Shortage Check
 
 ### Changed
