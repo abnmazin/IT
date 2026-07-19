@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { Visit, Category } from "@/types";
-import { ArrowRight, Package, CheckCircle, Trash2, AlertTriangle, Tag, Download } from "lucide-react";
+import { ArrowRight, Package, CheckCircle, Trash2, AlertTriangle, Tag, FileSpreadsheet } from "lucide-react";
+import { exportVisitReportToExcel } from "@/lib/exportExcel";
 
 interface VisitReportProps {
   visit: Visit;
@@ -62,6 +63,13 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
             {visit.date}{visit.hijriDate ? ` (${visit.hijriDate})` : ""} · أُنهيت
           </p>
         </div>
+        <button
+          onClick={() => exportVisitReportToExcel(visit, categories)}
+          className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-colors shrink-0 min-h-[44px]"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          تصدير Excel
+        </button>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">

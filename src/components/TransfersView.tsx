@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Visit, Category } from "@/types";
-import { CheckCircle, Package, Tag, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { CheckCircle, Package, Tag, Calendar, ChevronDown, ChevronUp, AlertTriangle, FileSpreadsheet } from "lucide-react";
+import { exportVisitReportToExcel } from "@/lib/exportExcel";
 
 interface CompletedVisitsViewProps {
   visits: Visit[];
@@ -92,6 +93,13 @@ export default function CompletedVisitsView({ visits, categories, onSelectVisit 
                       <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{missingQty} مفقود</span>
                     )}
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); exportVisitReportToExcel(visit, categories); }}
+                    className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600 transition-colors"
+                    title="تصدير Excel"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                  </button>
                   {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                 </div>
               </button>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Box, Category, WarehouseItem } from "@/types";
-import { ArrowRight, Package, Tag, Minus, Plus, Search, X, Send } from "lucide-react";
+import { ArrowRight, Package, Tag, Minus, Plus, Search, X, Send, FileSpreadsheet } from "lucide-react";
+import { exportBoxToExcel } from "@/lib/exportExcel";
 
 interface BoxDetailViewProps {
   box: Box;
@@ -88,6 +89,15 @@ export default function BoxDetailView({
             {visitName} · {totalQty} قطعة · {box.items.length} صنف
           </p>
         </div>
+        {box.items.length > 0 && (
+          <button
+            onClick={() => exportBoxToExcel(box, visitName, categories)}
+            className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-colors shrink-0 min-h-[44px]"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            تصدير Excel
+          </button>
+        )}
       </div>
 
       {!readonly && onAddItemToBox && visitId && (
