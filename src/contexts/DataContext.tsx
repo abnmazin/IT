@@ -526,29 +526,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      const now = new Date();
-      const hijriYear = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { year: "numeric" }).format(now);
-      const gregorianYear = now.getFullYear().toString();
-      const newVisit: Visit = {
-        id: `visit-${Date.now()}`,
-        name: visit.name,
-        date: visit.date,
-        hijriDate: hijriYear,
-        year: gregorianYear,
+      const updated: Visit = {
+        ...visit,
         status: "inactive",
         boxes: visit.boxes.map((b) => ({
           ...b,
-          id: `box-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          items: b.items.map((bi) => ({
-            ...bi,
-            qty: 0,
-            returnedQty: undefined,
-            status: undefined,
-          })),
+          items: b.items.map((bi) => ({ ...bi, qty: 0, returnedQty: undefined, status: undefined })),
         })),
       };
-      saveVisit(newVisit);
-      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, `نسخة جديدة — ${hijriYear} / ${gregorianYear}`, visitId);
+      saveVisit(updated);
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "العودة إلى القالب", visitId);
     },
     [visits, logActivity]
   );
