@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { Visit, VisitStatus, WarehouseItem } from "@/types";
 import {
   Plus, MapPin, Calendar, X, Play, CheckCircle, Package,
-  RotateCcw, AlertTriangle, ShoppingCart, Trash2,
+  AlertTriangle, ShoppingCart, Trash2,
 } from "lucide-react";
 
 interface VisitsViewProps {
@@ -13,7 +13,6 @@ interface VisitsViewProps {
   onSelectVisit: (visitId: string) => void;
   onAddVisit: (name: string, date: string, hijriDate?: string) => void;
   onToggleVisit: (visitId: string) => void;
-  onReactivateVisit: (visitId: string) => void;
   onFillBoxes: (visitId: string) => void;
   onDeleteVisit?: (visitId: string) => void;
 }
@@ -31,7 +30,6 @@ export default function VisitsView({
   onSelectVisit,
   onAddVisit,
   onToggleVisit,
-  onReactivateVisit,
   onFillBoxes,
   onDeleteVisit,
 }: VisitsViewProps) {
@@ -81,8 +79,7 @@ export default function VisitsView({
 
   const activeVisits = visits.filter((v) => v.status === "active");
   const collectingVisits = visits.filter((v) => v.status === "collecting");
-  const inactiveVisits = visits.filter((v) => v.status === "inactive");
-  const completedVisits = visits.filter((v) => v.status === "completed");
+  const inactiveVisits = visits.filter((v) => v.status === "inactive" || v.status === "completed");
 
   const renderVisit = (visit: Visit) => {
     const cfg = STATUS_CONFIG[visit.status];
@@ -205,13 +202,31 @@ export default function VisitsView({
               تفعيل
             </button>
           )}
-          {visit.status === "completed" && (
+          {visit.status === "completed" && hasBoxes && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleFillClick(visit); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-violet-50 text-violet-600 rounded-lg text-[11px] font-medium hover:bg-violet-100 transition-colors min-h-[44px] active:scale-95"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" />
+                تعبئة
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-emerald-600 text-white rounded-lg text-[11px] font-medium hover:bg-emerald-700 transition-colors min-h-[44px] active:scale-95"
+              >
+                <Play className="w-3.5 h-3.5" />
+                تفعيل
+              </button>
+            </>
+          )}
+          {visit.status === "completed" && !hasBoxes && (
             <button
-              onClick={(e) => { e.stopPropagation(); onReactivateVisit(visit.id); }}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-violet-600 text-white rounded-lg text-[11px] font-medium hover:bg-violet-700 transition-colors min-h-[44px] active:scale-95"
+              onClick={(e) => { e.stopPropagation(); onToggleVisit(visit.id); }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 bg-emerald-600 text-white rounded-lg text-[11px] font-medium hover:bg-emerald-700 transition-colors min-h-[44px] active:scale-95"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              إعادة تفعيل
+              <Play className="w-3.5 h-3.5" />
+              تفعيل
             </button>
           )}
           {onDeleteVisit && (
@@ -332,18 +347,6 @@ export default function VisitsView({
           <h2 className="text-sm font-semibold text-slate-500 mb-2">زيارات غير مفعلة</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
             {inactiveVisits.map(renderVisit)}
-          </div>
-        </div>
-      )}
-
-      {completedVisits.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-sky-600 mb-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-sky-500" />
-            زيارات مكتملة
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-            {completedVisits.map(renderVisit)}
           </div>
         </div>
       )}

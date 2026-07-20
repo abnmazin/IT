@@ -180,7 +180,6 @@ export default function Home() {
               onSelectVisit={setSelectedVisitId}
               onAddVisit={data.handleAddVisit}
               onToggleVisit={data.handleToggleVisit}
-              onReactivateVisit={data.handleReactivateVisit}
               onFillBoxes={data.handleFillBoxesFromTemplate}
               onDeleteVisit={data.handleDeleteVisit}
             />

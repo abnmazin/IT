@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Visit, Box, Category } from "@/types";
-import { Package, Search, X, Power } from "lucide-react";
+import { Package, Search, X, Power, FileSpreadsheet } from "lucide-react";
+import { exportBoxToExcel } from "@/lib/exportExcel";
 
 interface BoxesViewProps {
   visits: Visit[];
@@ -94,7 +95,13 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
                   <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">
                     <Package className="w-4 h-4 text-sky-500" />
                   </div>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); exportBoxToExcel(box, currentVisit.name, categories); }}
+                    className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600 transition-colors"
+                    title="تصدير Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <h3 className="text-sm font-semibold text-slate-800 truncate">{box.name}</h3>
                 <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-slate-100">
