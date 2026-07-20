@@ -64,9 +64,24 @@ export default function UsersSettings({
     setShowModal(false);
   };
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmToggleId, setConfirmToggleId] = useState<string | null>(null);
+
   const handleDelete = (user: User) => {
-    if (confirm(`هل أنت متأكد من حذف "${user.name}"؟`)) {
+    if (confirmDeleteId === user.id) {
       onDelete(user.id);
+      setConfirmDeleteId(null);
+    } else {
+      setConfirmDeleteId(user.id);
+    }
+  };
+
+  const handleToggle = (userId: string) => {
+    if (confirmToggleId === userId) {
+      onToggle(userId);
+      setConfirmToggleId(null);
+    } else {
+      setConfirmToggleId(userId);
     }
   };
 
@@ -109,23 +124,59 @@ export default function UsersSettings({
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <button
-                      onClick={() => onToggle(user.id)}
-                      className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-md transition-colors ${
-                        user.active ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" : "text-red-600 bg-red-50 hover:bg-red-100"
-                      }`}
-                    >
-                      {user.active ? <><UserCheck className="w-3 h-3" />نشط</> : <><UserX className="w-3 h-3" />معطّل</>}
-                    </button>
+                    {confirmToggleId === user.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleToggle(user.id)}
+                          className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-md transition-colors ${
+                            user.active ? "text-red-600 bg-red-50 hover:bg-red-100" : "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                          }`}
+                        >
+                          {user.active ? "تعطيل" : "تفعيل"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmToggleId(null)}
+                          className="px-3 h-9 flex items-center justify-center rounded-md bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleToggle(user.id)}
+                        className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-md transition-colors ${
+                          user.active ? "text-emerald-600 bg-emerald-50 hover:bg-emerald-100" : "text-red-600 bg-red-50 hover:bg-red-100"
+                        }`}
+                      >
+                        {user.active ? <><UserCheck className="w-3 h-3" />نشط</> : <><UserX className="w-3 h-3" />معطّل</>}
+                      </button>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-1">
                       <button onClick={() => openEdit(user)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" title="تعديل">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(user)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="حذف">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {confirmDeleteId === user.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="px-3 h-9 flex items-center justify-center rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
+                          >
+                            تأكيد
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="px-3 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
+                          >
+                            إلغاء
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => handleDelete(user)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors" title="حذف">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -156,14 +207,33 @@ export default function UsersSettings({
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <button
-                  onClick={() => onToggle(user.id)}
-                  className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg transition-colors min-h-[40px] ${
-                    user.active ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50"
-                  }`}
-                >
-                  {user.active ? <><UserCheck className="w-3 h-3" />نشط</> : <><UserX className="w-3 h-3" />معطّل</>}
-                </button>
+                {confirmToggleId === user.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleToggle(user.id)}
+                      className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg transition-colors min-h-[40px] ${
+                        user.active ? "text-red-600 bg-red-50" : "text-emerald-600 bg-emerald-50"
+                      }`}
+                    >
+                      {user.active ? "تعطيل" : "تفعيل"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmToggleId(null)}
+                      className="px-3 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors min-h-[40px]"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleToggle(user.id)}
+                    className={`flex items-center gap-1.5 text-xs font-medium px-3 h-9 rounded-lg transition-colors min-h-[40px] ${
+                      user.active ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50"
+                    }`}
+                  >
+                    {user.active ? <><UserCheck className="w-3 h-3" />نشط</> : <><UserX className="w-3 h-3" />معطّل</>}
+                  </button>
+                )}
                 <div className="flex-1" />
                 <button
                   onClick={() => openEdit(user)}
@@ -171,12 +241,29 @@ export default function UsersSettings({
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => handleDelete(user)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {confirmDeleteId === user.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleDelete(user)}
+                      className="px-3 h-9 flex items-center justify-center rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
+                    >
+                      تأكيد
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-3 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleDelete(user)}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))

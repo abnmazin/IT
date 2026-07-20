@@ -526,30 +526,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      const restored: Record<string, number> = {};
-      visit.boxes.forEach((b) =>
-        b.items.forEach((bi) => {
-          if (bi.status === "returned" && bi.returnedQty && bi.returnedQty > 0) {
-            restored[bi.warehouseItemId] = (restored[bi.warehouseItemId] || 0) + bi.returnedQty;
-          }
-        })
-      );
-      const updated: Visit = {
-        ...visit,
+      const newVisit: Visit = {
+        id: `visit-${Date.now()}`,
+        name: visit.name,
+        date: visit.date,
+        hijriDate: visit.hijriDate,
+        year: undefined,
         status: "inactive",
         boxes: visit.boxes.map((b) => ({
           ...b,
-          items: b.items.map((bi) => ({ ...bi, qty: 0, returnedQty: undefined, status: undefined })),
+          id: `box-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          items: b.items.map((bi) => ({
+            ...bi,
+            qty: 0,
+            returnedQty: undefined,
+            status: undefined,
+          })),
         })),
       };
-      saveVisit(updated);
-      Object.entries(restored).forEach(([id, qty]) => {
-        const whItem = warehouseItems.find((w) => w.id === id);
-        if (whItem) saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty + qty });
-      });
-      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "تم إرجاع العناصر المُرجعة للمخزن، القالب جاهز", visitId);
+      saveVisit(newVisit);
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "تم إنشاء نسخة جديدة من القالب", visitId);
     },
-    [visits, warehouseItems, logActivity]
+    [visits, logActivity]
   );
 
   const handleFillBoxesFromTemplate = useCallback(
