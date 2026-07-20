@@ -526,12 +526,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
+      const now = new Date();
+      const hijriYear = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura", { year: "numeric" }).format(now);
+      const gregorianYear = now.getFullYear().toString();
       const newVisit: Visit = {
         id: `visit-${Date.now()}`,
         name: visit.name,
         date: visit.date,
-        hijriDate: visit.hijriDate,
-        year: undefined,
+        hijriDate: hijriYear,
+        year: gregorianYear,
         status: "inactive",
         boxes: visit.boxes.map((b) => ({
           ...b,
@@ -545,7 +548,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         })),
       };
       saveVisit(newVisit);
-      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "تم إنشاء نسخة جديدة من القالب", visitId);
+      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, `نسخة جديدة — ${hijriYear} / ${gregorianYear}`, visitId);
     },
     [visits, logActivity]
   );

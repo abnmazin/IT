@@ -43,8 +43,8 @@ export default function VisitsView({
   const [confirmAction, setConfirmAction] = useState<{ visitId: string; action: string } | null>(null);
 
   const handleAdd = () => {
-    if (!formName.trim() || !formDate) return;
-    onAddVisit(formName.trim(), formDate, formHijri.trim() || undefined);
+    if (!formName.trim() || !formDate || !formHijri.trim()) return;
+    onAddVisit(formName.trim(), formDate, formHijri.trim());
     setFormName("");
     setFormDate("");
     setFormHijri("");
@@ -362,10 +362,11 @@ export default function VisitsView({
             />
             <input
               type="text"
-              placeholder="التاريخ الهجري (اختياري)"
+              placeholder="التاريخ الهجري *"
               value={formHijri}
               onChange={(e) => setFormHijri(e.target.value)}
               className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 min-h-[44px]"
+              required
             />
           </div>
           <div className="flex gap-2">
