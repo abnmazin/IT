@@ -20,8 +20,9 @@ import {
   User,
   ActivityLogEntry,
   Category,
+  ArchivedVisit,
 } from "@/types";
-import { defaultCategories } from "@/types";
+import { defaultCategories, isSerialCategory, getItemSerials } from "@/types";
 import {
   initialWarehouseItems,
   initialVisits,
@@ -36,6 +37,7 @@ const COL = {
   visits: "visits",
   categories: "categories",
   activityLog: "activityLog",
+  archivedVisits: "archivedVisits",
 } as const;
 
 // ── Generic helpers ──────────────────────────────────────────
@@ -120,6 +122,77 @@ export async function addActivityEntry(entry: ActivityLogEntry): Promise<void> {
   await setDoc(doc(db, COL.activityLog, entry.id), toPlain(entry));
 }
 
+// ── Archived Visits ──────────────────────────────────────────
+export function subscribeArchivedVisits(callback: (visits: ArchivedVisit[]) => void): Unsubscribe {
+  return onSnapshot(collection(db, COL.archivedVisits), (snap) => {
+    const visits = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ArchivedVisit));
+    callback(visits);
+  });
+}
+
+export async function saveArchivedVisit(visit: ArchivedVisit): Promise<void> {
+  await setDoc(doc(db, COL.archivedVisits, visit.id), toPlain(visit));
+}
+
+export async function deleteArchivedVisitFS(id: string): Promise<void> {
+  await deleteDoc(doc(db, COL.archivedVisits, id));
+}
+
+// ── Legacy migration ─────────────────────────────────────────
+let migrated = false;
+
+export async function migrateWarehouseItems(
+  categories: { key: string; serialTracked: boolean }[]
+): Promise<void> {
+  if (migrated) return;
+  migrated = true;
+
+  const snap = await getDocs(collection(db, COL.warehouseItems));
+  const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WarehouseItem));
+  let changed = false;
+
+  const groups = new Map<string, WarehouseItem[]>();
+  for (const item of docs) {
+    if (!isSerialCategory(categories, item.category) || getItemSerials(item).length === 0) continue;
+    const key = `${item.category}::${item.name}`;
+    const list = groups.get(key) || [];
+    list.push(item);
+    groups.set(key, list);
+  }
+
+  for (const list of Array.from(groups.values())) {
+    if (list.length <= 1) continue;
+    const first = list[0];
+    const mergedSerials: string[] = [];
+    for (const item of list) {
+      for (const s of getItemSerials(item)) {
+        if (!mergedSerials.includes(s)) mergedSerials.push(s);
+      }
+    }
+    const merged: WarehouseItem = {
+      ...first,
+      serials: mergedSerials,
+      serialNumber: undefined,
+      totalQty: mergedSerials.length,
+    };
+    await setDoc(doc(db, COL.warehouseItems, first.id), toPlain(merged));
+    for (const item of list.slice(1)) {
+      await deleteDoc(doc(db, COL.warehouseItems, item.id));
+    }
+    changed = true;
+  }
+
+  for (const item of docs) {
+    if (isSerialCategory(categories, item.category) && item.serialNumber && !item.serials) {
+      await setDoc(
+        doc(db, COL.warehouseItems, item.id),
+        toPlain({ ...item, serials: [item.serialNumber], serialNumber: undefined, totalQty: 1 } as WarehouseItem)
+      );
+      changed = true;
+    }
+  }
+}
+
 // ── Seed data helper (first run only) ────────────────────────
 export async function seedCollection<T>(colName: string, items: T[]): Promise<void> {
   for (const item of items) {
@@ -131,17 +204,14 @@ export async function seedCollection<T>(colName: string, items: T[]): Promise<vo
 
 // ── Clear all Firestore data and re-seed ─────────────────────
 export async function resetFirestore(): Promise<void> {
-  const collections = [COL.users, COL.warehouseItems, COL.visits, COL.categories, COL.activityLog];
+  const collections = [COL.warehouseItems, COL.visits, COL.categories, COL.activityLog, COL.archivedVisits];
   for (const col of collections) {
     const snap = await getDocs(collection(db, col));
     for (const d of snap.docs) {
       await deleteDoc(d.ref);
     }
   }
-  await Promise.all([
-    seedCollection(COL.users, initialUsers),
-    seedCollection(COL.categories, defaultCategories),
-  ]);
+  await seedCollection(COL.categories, defaultCategories);
   seeded = true;
 }
 

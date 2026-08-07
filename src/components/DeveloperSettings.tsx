@@ -176,7 +176,7 @@ export default function DeveloperSettings({
             </div>
           </div>
           <p className="text-xs text-red-700/70 leading-relaxed relative">
-            سيحذف هذا المخزن والزيارات وسجل النشاط والمستخدمين، ثم يُعيد ت.Site بالكامل مع حساب المطور فقط.
+            سيحذف هذا المخزن والزيارات والزيارات المكتملة وسجل النشاط والفئات، مع إعادة تعيين الفئات الافتراضية. المستخدمون لن يتأثروا.
           </p>
           {!confirmReset ? (
             <button

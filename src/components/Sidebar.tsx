@@ -170,6 +170,16 @@ export default function Sidebar({
             <ChevronRight className="w-4 h-4" />
           )}
         </button>
+
+        {!collapsed && (
+          <div className="px-3 pb-3 border-t border-slate-700/50 pt-2">
+            <p className="text-[9px] text-slate-500 leading-relaxed text-center">
+              مسجد الموسوي الكبير
+              <br />
+              لجنة تكنولوجيا المعلومات
+            </p>
+          </div>
+        )}
       </aside>
     </>
   );

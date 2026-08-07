@@ -18,15 +18,18 @@ export interface Category {
   consumable: boolean;
 }
 
-export const SERIAL_TRACKED_CATEGORIES: ItemCategory[] = [
-  "Laptop",
-  "Monitor",
-  "Printer",
-  "Docking Station",
-];
+export function isSerialCategory(
+  categories: { key: string; serialTracked: boolean }[],
+  category: string
+): boolean {
+  const cat = categories.find((c) => c.key === category);
+  return cat ? cat.serialTracked : false;
+}
 
-export function isSerialTracked(category: ItemCategory): boolean {
-  return SERIAL_TRACKED_CATEGORIES.includes(category);
+export function getItemSerials(item: { serials?: string[]; serialNumber?: string; totalQty?: number }): string[] {
+  if (item.serials && item.serials.length > 0) return item.serials;
+  if (item.serialNumber) return [item.serialNumber];
+  return [];
 }
 
 export const defaultCategories: Category[] = [
@@ -47,6 +50,7 @@ export interface WarehouseItem {
   name: string;
   category: ItemCategory;
   serialNumber?: string;
+  serials?: string[];
   totalQty: number;
   consumable: boolean;
 }
@@ -82,11 +86,33 @@ export interface BoxItem {
   name: string;
   category: ItemCategory;
   serialNumber?: string;
+  serials?: string[];
   qty: number;
   originalQty: number;
   consumable: boolean;
   returnedQty?: number;
   status?: "returned" | "consumed" | "missing";
+  outSerials?: string[];
+  returnedSerials?: string[];
+}
+
+export function getBoxItemInOutSerials(item: BoxItem): { inBox: string[]; out: string[] } {
+  const serials = item.serials || [];
+  const out = (item.outSerials || []).filter((s) => serials.includes(s));
+  const inBox = serials.filter((s) => !out.includes(s));
+  return { inBox, out };
+}
+
+export function getItemReturnedSerials(item: BoxItem): string[] {
+  const { inBox, out } = getBoxItemInOutSerials(item);
+  const returned = (item.returnedSerials || []).filter((s) => out.includes(s));
+  return [...inBox, ...returned];
+}
+
+export function getItemMissingSerials(item: BoxItem): string[] {
+  const { out } = getBoxItemInOutSerials(item);
+  const returned = (item.returnedSerials || []).filter((s) => out.includes(s));
+  return out.filter((s) => !returned.includes(s));
 }
 
 export interface Transfer {
@@ -147,16 +173,17 @@ export interface VisitReport {
   boxReports: {
     boxId: string;
     boxName: string;
-    items: {
-      name: string;
-      category: ItemCategory;
-      serialNumber?: string;
-      deployedQty: number;
-      returnedQty: number;
-      consumedQty: number;
-      missingQty: number;
-      status: "returned" | "consumed" | "missing";
-    }[];
+      items: {
+        name: string;
+        category: ItemCategory;
+        serialNumber?: string;
+        serials?: string[];
+        deployedQty: number;
+        returnedQty: number;
+        consumedQty: number;
+        missingQty: number;
+        status: "returned" | "consumed" | "missing";
+      }[];
   }[];
 }
 
@@ -210,4 +237,15 @@ export interface ActivityLogEntry {
   timestamp: string;
   visitId?: string;
   details?: string;
+}
+
+export interface ArchivedVisit {
+  id: string;
+  visitId: string;
+  name: string;
+  date: string;
+  hijriDate: string;
+  year: string;
+  archivedAt: string;
+  boxes: Box[];
 }

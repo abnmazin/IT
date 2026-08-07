@@ -18,6 +18,8 @@ import {
   Category,
   ActivityLogEntry,
   ActivityType,
+  ArchivedVisit,
+  defaultCategories,
 } from "@/types";
 import {
   subscribeWarehouseItems,
@@ -25,16 +27,19 @@ import {
   subscribeCategories,
   subscribeActivityLog,
   subscribeUsers,
+  subscribeArchivedVisits,
   saveWarehouseItem,
   deleteWarehouseItemFS,
   saveVisit,
   deleteVisitFS,
+  saveArchivedVisit,
   saveCategory,
   deleteCategoryFS,
   saveUser,
   deleteUserFS,
   addActivityEntry,
   seedFirestoreIfNeeded,
+  migrateWarehouseItems,
 } from "@/lib/firestore";
 
 interface DataContextType {
@@ -43,6 +48,7 @@ interface DataContextType {
   categories: Category[];
   activityLog: ActivityLogEntry[];
   users: User[];
+  archivedVisits: ArchivedVisit[];
   loading: boolean;
   newNotificationCount: number;
   clearNotifications: () => void;
@@ -50,28 +56,28 @@ interface DataContextType {
 
   logActivity: (type: ActivityType, description: string, details?: string, visitId?: string) => void;
 
-  handleAddWarehouseItem: (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
-  handleEditWarehouseItem: (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => void;
+  handleAddWarehouseItem: (name: string, category: string, totalQty: number, consumable: boolean, serials?: string[]) => void;
+  handleEditWarehouseItem: (id: string, name: string, category: string, totalQty: number, consumable: boolean, serials?: string[]) => void;
   handleDeleteWarehouseItem: (id: string) => void;
 
   handleAddCategory: (key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
   handleEditCategory: (id: string, key: string, label: string, serialTracked: boolean, consumable: boolean) => void;
   handleDeleteCategory: (id: string) => void;
 
-  handleAddVisit: (name: string, date: string, hijriDate?: string) => void;
+  handleAddVisit: (name: string, date: string) => void;
   handleDeleteVisit: (visitId: string) => void;
   handleToggleVisit: (visitId: string) => void;
   handleActivateVisit: (visitId: string, year: string, hijriDate: string) => void;
-  handleCollectVisit: (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => void;
+  handleCollectVisit: (visitId: string, collected: { warehouseItemId: string; qty: number; returnedSerials?: string[]; status: "returned" | "consumed" | "missing" }[]) => void;
   handleFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
   handleReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
   handleAddBox: (visitId: string, name: string, label: string) => void;
   handleDeleteBox: (visitId: string, boxId: string) => void;
-  handleReactivateVisit: (visitId: string) => void;
   handleFillBoxesFromTemplate: (visitId: string) => void;
   handleUpdateBoxItemQty: (visitId: string, boxId: string, warehouseItemId: string, delta: number) => void;
-  handleAddItemToBox: (visitId: string, boxId: string, warehouseItemId: string, qty: number) => void;
-  handleBulkAddItemsToBox: (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number }[]) => void;
+  handleToggleBoxItemSerial: (visitId: string, boxId: string, warehouseItemId: string, serial: string) => void;
+  handleAddItemToBox: (visitId: string, boxId: string, warehouseItemId: string, qty: number, serials?: string[]) => void;
+  handleBulkAddItemsToBox: (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number; serials?: string[] }[]) => void;
   handleBulkDeleteWarehouseItems: (ids: string[]) => void;
 
   handleAddUser: (name: string, role: User["role"], pin: string) => void;
@@ -94,12 +100,91 @@ function today() {
   return new Date().toISOString().split("T")[0];
 }
 
+function deployToWarehouse(warehouseItems: WarehouseItem[], boxItems: BoxItem[]) {
+  const groups: Record<string, { qty: number; serials: string[] }> = {};
+  for (const bi of boxItems) {
+    const g = groups[bi.warehouseItemId] || { qty: 0, serials: [] };
+    const serials = (bi.serials || []).filter(Boolean);
+    if (serials.length > 0) {
+      g.serials = Array.from(new Set([...g.serials, ...serials]));
+    } else {
+      g.qty += bi.originalQty || bi.qty;
+    }
+    groups[bi.warehouseItemId] = g;
+  }
+  for (const [wid, g] of Object.entries(groups)) {
+    const wh = warehouseItems.find((w) => w.id === wid);
+    if (!wh) continue;
+    if (g.serials.length > 0) {
+      const remaining = (wh.serials || []).filter((s) => !g.serials.includes(s));
+      saveWarehouseItem({
+        ...wh,
+        serials: remaining,
+        serialNumber: remaining.length === 1 ? remaining[0] : undefined,
+        totalQty: remaining.length,
+      });
+    } else if (g.qty > 0) {
+      saveWarehouseItem({ ...wh, totalQty: Math.max(0, wh.totalQty - g.qty) });
+    }
+  }
+}
+
+function restoreToWarehouse(
+  warehouseItems: WarehouseItem[],
+  restoreList: { warehouseItemId: string; serials?: string[]; qty: number }[]
+) {
+  const groups: Record<string, { qty: number; serials: string[] }> = {};
+  for (const r of restoreList) {
+    const g = groups[r.warehouseItemId] || { qty: 0, serials: [] };
+    if (r.serials && r.serials.length > 0) {
+      g.serials = Array.from(new Set([...g.serials, ...r.serials.filter(Boolean)]));
+    } else {
+      g.qty += r.qty;
+    }
+    groups[r.warehouseItemId] = g;
+  }
+  for (const [wid, g] of Object.entries(groups)) {
+    const wh = warehouseItems.find((w) => w.id === wid);
+    if (!wh) continue;
+    if (g.serials.length > 0) {
+      const merged = Array.from(new Set([...(wh.serials || []), ...g.serials]));
+      saveWarehouseItem({
+        ...wh,
+        serials: merged,
+        serialNumber: merged.length === 1 ? merged[0] : undefined,
+        totalQty: merged.length,
+      });
+    } else if (g.qty > 0) {
+      saveWarehouseItem({ ...wh, totalQty: wh.totalQty + g.qty });
+    }
+  }
+}
+
+function resetToTemplate(visit: Visit): Visit {
+  return {
+    ...visit,
+    status: "inactive",
+    boxes: visit.boxes.map((b) => ({
+      ...b,
+      items: b.items.map((bi) => ({
+        ...bi,
+        qty: bi.originalQty || bi.qty,
+        outSerials: undefined,
+        returnedSerials: undefined,
+        returnedQty: undefined,
+        status: undefined,
+      })),
+    })),
+  };
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [archivedVisits, setArchivedVisits] = useState<ArchivedVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [newNotificationCount, setNewNotificationCount] = useState(0);
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -111,12 +196,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     async function init() {
       await seedFirestoreIfNeeded();
+      await migrateWarehouseItems(defaultCategories);
       unsubs = [
         subscribeWarehouseItems((items) => { setWarehouseItems(items); setLoading(false); }),
         subscribeVisits((v) => setVisits(v)),
         subscribeCategories((c) => setCategories(c)),
         subscribeActivityLog((log) => setActivityLog(log)),
         subscribeUsers((u) => setUsers(u)),
+        subscribeArchivedVisits((a) => setArchivedVisits(a)),
       ];
     }
 
@@ -158,13 +245,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // ── Warehouse ─────────────────────────────────────
   const handleAddWarehouseItem = useCallback(
-    (name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
+    (name: string, category: string, totalQty: number, consumable: boolean, serials?: string[]) => {
+      const cleanSerials = serials?.map((s) => s.trim()).filter(Boolean);
       const item: WarehouseItem = {
         id: `wh-${Date.now()}`,
         name,
         category: category as WarehouseItem["category"],
-        serialNumber: serialNumber || undefined,
-        totalQty,
+        serialNumber: cleanSerials?.length === 1 ? cleanSerials[0] : undefined,
+        serials: cleanSerials && cleanSerials.length > 0 ? cleanSerials : undefined,
+        totalQty: cleanSerials && cleanSerials.length > 0 ? cleanSerials.length : totalQty,
         consumable,
       };
       saveWarehouseItem(item);
@@ -174,13 +263,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const handleEditWarehouseItem = useCallback(
-    (id: string, name: string, category: string, serialNumber: string, totalQty: number, consumable: boolean) => {
+    (id: string, name: string, category: string, totalQty: number, consumable: boolean, serials?: string[]) => {
+      const cleanSerials = serials?.map((s) => s.trim()).filter(Boolean);
       const item: WarehouseItem = {
         id,
         name,
         category: category as WarehouseItem["category"],
-        serialNumber: serialNumber || undefined,
-        totalQty,
+        serialNumber: cleanSerials?.length === 1 ? cleanSerials[0] : undefined,
+        serials: cleanSerials && cleanSerials.length > 0 ? cleanSerials : undefined,
+        totalQty: cleanSerials && cleanSerials.length > 0 ? cleanSerials.length : totalQty,
         consumable,
       };
       saveWarehouseItem(item);
@@ -226,12 +317,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // ── Visits ────────────────────────────────────────
   const handleAddVisit = useCallback(
-    (name: string, date: string, hijriDate?: string) => {
+    (name: string, date: string) => {
       const visit: Visit = {
         id: `visit-${Date.now()}`,
         name,
         date,
-        hijriDate: hijriDate || undefined,
         status: "inactive",
         boxes: [],
       };
@@ -249,17 +339,67 @@ export function DataProvider({ children }: { children: ReactNode }) {
         visit.status === "inactive" ? "active" :
         visit.status === "active" ? "collecting" :
         visit.status === "collecting" ? "completed" : "inactive";
-      saveVisit({ ...visit, status: nextStatus as Visit["status"] });
-      logActivity(
-        nextStatus === "active" ? "activate_visit" :
-        nextStatus === "collecting" ? "collect_visit" :
-        nextStatus === "completed" ? "complete_visit" : "deactivate_visit",
-        `${nextStatus === "active" ? "تفعيل" : nextStatus === "collecting" ? "جمع العناصر" : nextStatus === "completed" ? "إنهاء" : "إلغاء تفعيل"} زيارة: ${visit.name}`,
-        undefined,
-        visitId
-      );
+
+      if (visit.status === "inactive" && nextStatus === "active") {
+        saveVisit({ ...visit, status: "active" });
+        deployToWarehouse(warehouseItems, visit.boxes.flatMap((b) => b.items));
+        logActivity("activate_visit", `تفعيل زيارة: ${visit.name}`, undefined, visitId);
+      } else if (visit.status === "collecting" && nextStatus === "completed") {
+        const restoreList: { warehouseItemId: string; serials?: string[]; qty: number }[] = [];
+        const completedBoxes = visit.boxes.map((b) => ({
+          ...b,
+          items: b.items.map((bi) => {
+            const serials = bi.serials || [];
+            if (serials.length > 0) {
+              const out = (bi.outSerials || []).filter((s) => serials.includes(s));
+              const inBox = serials.filter((s) => !out.includes(s));
+              restoreList.push({ warehouseItemId: bi.warehouseItemId, serials: inBox, qty: 0 });
+              return {
+                ...bi,
+                returnedQty: inBox.length,
+                returnedSerials: undefined,
+                status: (out.length > 0 ? "missing" : "returned") as BoxItem["status"],
+              };
+            }
+            const returnedQty = bi.status === "consumed" ? 0 : bi.qty;
+            restoreList.push({ warehouseItemId: bi.warehouseItemId, qty: returnedQty });
+            return { ...bi, returnedQty, status: (bi.status || (returnedQty === (bi.originalQty || bi.qty) ? "returned" : bi.consumable ? "consumed" : "missing")) as BoxItem["status"] };
+          }),
+        }));
+        restoreToWarehouse(warehouseItems, restoreList);
+        const archive: ArchivedVisit = {
+          id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          visitId: visit.id,
+          name: visit.name,
+          date: visit.date,
+          hijriDate: visit.hijriDate || "",
+          year: visit.year || "",
+          archivedAt: now(),
+          boxes: completedBoxes,
+        };
+        saveArchivedVisit(archive);
+        saveVisit(resetToTemplate(visit));
+        logActivity("complete_visit", `إنهاء زيارة: ${visit.name}`, "إنهاء سريع", visitId);
+      } else if (visit.status === "active" && nextStatus === "inactive") {
+        const restoreList = visit.boxes.flatMap((b) => b.items).map((bi) => {
+          const serials = bi.serials || [];
+          if (serials.length > 0) return { warehouseItemId: bi.warehouseItemId, serials, qty: 0 };
+          return { warehouseItemId: bi.warehouseItemId, qty: bi.originalQty || bi.qty };
+        });
+        restoreToWarehouse(warehouseItems, restoreList);
+        saveVisit(resetToTemplate(visit));
+        logActivity("deactivate_visit", `إلغاء تفعيل زيارة: ${visit.name}`, undefined, visitId);
+      } else {
+        saveVisit({ ...visit, status: nextStatus as Visit["status"] });
+        logActivity(
+          nextStatus === "collecting" ? "collect_visit" : "deactivate_visit",
+          `${nextStatus === "collecting" ? "جمع العناصر" : "إلغاء تفعيل"} زيارة: ${visit.name}`,
+          undefined,
+          visitId
+        );
+      }
     },
-    [visits, logActivity]
+    [visits, warehouseItems, logActivity]
   );
 
   const handleActivateVisit = useCallback(
@@ -267,31 +407,65 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
       saveVisit({ ...visit, status: "active", year: year || undefined, hijriDate: hijriDate || undefined });
+      deployToWarehouse(warehouseItems, visit.boxes.flatMap((b) => b.items));
       logActivity("activate_visit", `تفعيل زيارة: ${visit.name} — ${year}`, undefined, visitId);
     },
-    [visits, logActivity]
+    [visits, warehouseItems, logActivity]
   );
 
   const handleCollectVisit = useCallback(
-    (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => {
+    (visitId: string, collected: { warehouseItemId: string; qty: number; returnedSerials?: string[]; status: "returned" | "consumed" | "missing" }[]) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      const updated: Visit = {
-        ...visit,
-        status: "completed",
-        boxes: visit.boxes.map((b) => ({
-          ...b,
-          items: b.items.map((bi) => {
-            const c = collected.find((x) => x.warehouseItemId === bi.warehouseItemId);
-            if (c) return { ...bi, status: c.status, returnedQty: c.status === "returned" ? c.qty : 0 };
-            return { ...bi, status: "missing" as const };
-          }),
-        })),
+      const map = new Map<string, { qty: number; returnedSerials?: string[]; status: "returned" | "consumed" | "missing" }>(
+        collected.map((c) => [c.warehouseItemId, c])
+      );
+      const restoreList: { warehouseItemId: string; serials?: string[]; qty: number }[] = [];
+      const completedBoxes = visit.boxes.map((b) => ({
+        ...b,
+        items: b.items.map((bi) => {
+          const c = map.get(bi.warehouseItemId);
+          const serials = bi.serials || [];
+          if (serials.length > 0) {
+            const out = (bi.outSerials || []).filter((s) => serials.includes(s));
+            const returnedOut = (c?.returnedSerials || []).filter((s) => out.includes(s));
+            const inBox = serials.filter((s) => !out.includes(s));
+            const returned = Array.from(new Set([...inBox, ...returnedOut]));
+            const missing = out.filter((s) => !returnedOut.includes(s));
+            restoreList.push({ warehouseItemId: bi.warehouseItemId, serials: returned, qty: 0 });
+            return {
+              ...bi,
+              returnedQty: returned.length,
+              returnedSerials: returnedOut,
+              status: (missing.length > 0 ? "missing" : "returned") as BoxItem["status"],
+            };
+          }
+          const returnedQty = c?.qty ?? bi.qty;
+          const deployedQty = bi.originalQty || bi.qty;
+          restoreList.push({ warehouseItemId: bi.warehouseItemId, qty: returnedQty });
+          return {
+            ...bi,
+            returnedQty,
+            status: (c?.status || (returnedQty === deployedQty ? "returned" : bi.consumable ? "consumed" : "missing")) as BoxItem["status"],
+          };
+        }),
+      }));
+      restoreToWarehouse(warehouseItems, restoreList);
+      const archive: ArchivedVisit = {
+        id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        visitId: visit.id,
+        name: visit.name,
+        date: visit.date,
+        hijriDate: visit.hijriDate || "",
+        year: visit.year || "",
+        archivedAt: now(),
+        boxes: completedBoxes,
       };
-      saveVisit(updated);
+      saveArchivedVisit(archive);
+      saveVisit(resetToTemplate(visit));
       logActivity("complete_visit", `إنهاء زيارة: ${visit.name}`, `تم جمع ${collected.length} صنف`, visitId);
     },
-    [visits, logActivity]
+    [visits, warehouseItems, logActivity]
   );
 
   const handleFillBox = useCallback(
@@ -307,17 +481,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
         }),
       };
       saveVisit(updated);
-      items.forEach((item) => {
-        const whItem = warehouseItems.find((w) => w.id === item.warehouseItemId);
-        if (whItem) {
-          saveWarehouseItem({ ...whItem, totalQty: Math.max(0, whItem.totalQty - item.qty) });
-        }
-      });
       const box = visit.boxes.find((b) => b.id === boxId);
       const itemNames = items.map((i) => `${i.name}(${i.qty})`).join(" + ");
       logActivity("fill_box", `تعبئة ${box?.name || "صندوق"} — ${itemNames}`, visit.name, visitId);
     },
-    [visits, warehouseItems, logActivity]
+    [visits, logActivity]
   );
 
   const handleReturnItems = useCallback(
@@ -375,57 +543,76 @@ export function DataProvider({ children }: { children: ReactNode }) {
     (visitId: string, boxId: string, warehouseItemId: string, delta: number) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      if (delta > 0) {
-        const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
-        if (!whItem || whItem.totalQty < delta) return;
-        const updated: Visit = {
-          ...visit,
-          boxes: visit.boxes.map((b) => {
-            if (b.id !== boxId) return b;
-            return {
-              ...b,
-              items: b.items.map((bi) => {
-                if (bi.warehouseItemId !== warehouseItemId) return bi;
-                return { ...bi, qty: bi.qty + delta, originalQty: (bi.originalQty || bi.qty) + delta };
-              }),
-            };
-          }),
-        };
-        saveVisit(updated);
-        saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty - delta });
-      } else {
-        const updated: Visit = {
-          ...visit,
-          boxes: visit.boxes.map((b) => {
-            if (b.id !== boxId) return b;
-            return {
-              ...b,
-              items: b.items.map((bi) => {
-                if (bi.warehouseItemId !== warehouseItemId) return bi;
-                return { ...bi, qty: Math.max(0, bi.qty + delta) };
-              }),
-            };
-          }),
-        };
-        saveVisit(updated);
-      }
-      const item = visit.boxes.find((b) => b.id === boxId)?.items.find((i) => i.warehouseItemId === warehouseItemId);
-      if (item) {
-        const label = delta > 0 ? "إضافة" : "نقصان";
-        logActivity("fill_box", `${label} ${Math.abs(delta)} × ${item.name} في صندوق ${visit.boxes.find((b) => b.id === boxId)?.name || ""}`, visit.name, visitId);
-      }
+      const box = visit.boxes.find((b) => b.id === boxId);
+      const bi = box?.items.find((i) => i.warehouseItemId === warehouseItemId);
+      if (!bi) return;
+      const max = bi.originalQty || bi.qty;
+      if (delta > 0 && bi.qty >= max) return;
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => {
+          if (b.id !== boxId) return b;
+          return {
+            ...b,
+            items: b.items.map((item) => {
+              if (item.warehouseItemId !== warehouseItemId) return item;
+              const nextQty = Math.max(0, Math.min(max, item.qty + delta));
+              return { ...item, qty: nextQty };
+            }),
+          };
+        }),
+      };
+      saveVisit(updated);
+      const label = delta > 0 ? "إضافة" : "نقصان";
+      logActivity("fill_box", `${label} ${Math.abs(delta)} × ${bi.name} في صندوق ${box?.name || ""}`, visit.name, visitId);
     },
-    [visits, warehouseItems, logActivity]
+    [visits, logActivity]
+  );
+
+  const handleToggleBoxItemSerial = useCallback(
+    (visitId: string, boxId: string, warehouseItemId: string, serial: string) => {
+      const visit = visits.find((v) => v.id === visitId);
+      if (!visit) return;
+      if (visit.status !== "active" && visit.status !== "collecting") return;
+      const box = visit.boxes.find((b) => b.id === boxId);
+      const bi = box?.items.find((i) => i.warehouseItemId === warehouseItemId);
+      if (!bi) return;
+      const serials = bi.serials || [];
+      if (!serials.includes(serial)) return;
+      const out = new Set(bi.outSerials || []);
+      const nextOut = out.has(serial)
+        ? (bi.outSerials || []).filter((s) => s !== serial)
+        : Array.from(new Set([...(bi.outSerials || []), serial]));
+      const updated: Visit = {
+        ...visit,
+        boxes: visit.boxes.map((b) => {
+          if (b.id !== boxId) return b;
+          return {
+            ...b,
+            items: b.items.map((i) => {
+              if (i.warehouseItemId !== warehouseItemId) return i;
+              return { ...i, outSerials: nextOut, qty: Math.max(0, serials.length - nextOut.length) };
+            }),
+          };
+        }),
+      };
+      saveVisit(updated);
+      const pulled = out.has(serial);
+      logActivity("fill_box", `${pulled ? "إعادة" : "سحب"} ${bi.name} ${pulled ? "" : "من الصندوق"} — ${serial}`, visit.name, visitId);
+    },
+    [visits, logActivity]
   );
 
   const handleAddItemToBox = useCallback(
-    (visitId: string, boxId: string, warehouseItemId: string, qty: number) => {
+    (visitId: string, boxId: string, warehouseItemId: string, qty: number, serials?: string[]) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
       const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
-      if (!whItem || whItem.totalQty < qty) return;
+      if (!whItem) return;
       const box = visit.boxes.find((b) => b.id === boxId);
       if (!box) return;
+      const cleanSerials = serials?.filter(Boolean) || [];
+      const addQty = cleanSerials.length > 0 ? cleanSerials.length : qty;
       const existing = box.items.find((i) => i.warehouseItemId === warehouseItemId);
       let updatedVisit: Visit;
       if (existing) {
@@ -437,7 +624,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
               ...b,
               items: b.items.map((bi) => {
                 if (bi.warehouseItemId !== warehouseItemId) return bi;
-                return { ...bi, qty: bi.qty + qty, originalQty: (bi.originalQty || bi.qty) + qty };
+                const mergedSerials = cleanSerials.length > 0
+                  ? Array.from(new Set([...(bi.serials || []), ...cleanSerials]))
+                  : bi.serials;
+                const inBoxQty = mergedSerials && mergedSerials.length > 0
+                  ? Math.max(0, mergedSerials.length - (bi.outSerials?.length || 0))
+                  : bi.qty + addQty;
+                return { ...bi, qty: inBoxQty, originalQty: (bi.originalQty || bi.qty) + addQty, serials: mergedSerials };
               }),
             };
           }),
@@ -448,8 +641,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
           name: whItem.name,
           category: whItem.category,
           serialNumber: whItem.serialNumber,
-          qty,
-          originalQty: qty,
+          serials: cleanSerials.length > 0 ? cleanSerials : undefined,
+          qty: addQty,
+          originalQty: addQty,
           consumable: whItem.consumable,
         };
         updatedVisit = {
@@ -461,33 +655,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
       }
       saveVisit(updatedVisit);
-      saveWarehouseItem({ ...whItem, totalQty: whItem.totalQty - qty });
-      logActivity("fill_box", `إضافة ${qty} × ${whItem.name} إلى ${box.name}`, visit.name, visitId);
+      logActivity("fill_box", `إضافة ${addQty} × ${whItem.name} إلى ${box.name}`, visit.name, visitId);
     },
     [visits, warehouseItems, logActivity]
   );
 
   const handleBulkAddItemsToBox = useCallback(
-    (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number }[]) => {
+    (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number; serials?: string[] }[]) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
       let currentBoxes = visit.boxes;
-      const warehouseUpdates: WarehouseItem[] = [];
-      for (const { warehouseItemId, qty } of items) {
+      for (const { warehouseItemId, qty, serials } of items) {
         const whItem = warehouseItems.find((w) => w.id === warehouseItemId);
-        if (!whItem || whItem.totalQty < qty) continue;
-        warehouseUpdates.push({ ...whItem, totalQty: whItem.totalQty - qty });
+        if (!whItem) continue;
+        const cleanSerials = serials?.filter(Boolean) || [];
+        const addQty = cleanSerials.length > 0 ? cleanSerials.length : qty;
         currentBoxes = currentBoxes.map((b) => {
           if (b.id !== boxId) return b;
           const existing = b.items.find((i) => i.warehouseItemId === warehouseItemId);
           if (existing) {
-            return { ...b, items: b.items.map((bi) => bi.warehouseItemId !== warehouseItemId ? bi : { ...bi, qty: bi.qty + qty, originalQty: (bi.originalQty || bi.qty) + qty }) };
+            const mergedSerials = cleanSerials.length > 0
+              ? Array.from(new Set([...(existing.serials || []), ...cleanSerials]))
+              : existing.serials;
+            const inBoxQty = mergedSerials && mergedSerials.length > 0
+              ? Math.max(0, mergedSerials.length - (existing.outSerials?.length || 0))
+              : existing.qty + addQty;
+            return { ...b, items: b.items.map((bi) => bi.warehouseItemId !== warehouseItemId ? bi : { ...bi, qty: inBoxQty, originalQty: (bi.originalQty || bi.qty) + addQty, serials: mergedSerials }) };
           }
-          return { ...b, items: [...b.items, { warehouseItemId, name: whItem.name, category: whItem.category, serialNumber: whItem.serialNumber, qty, originalQty: qty, consumable: whItem.consumable }] };
+          return { ...b, items: [...b.items, { warehouseItemId, name: whItem.name, category: whItem.category, serialNumber: whItem.serialNumber, serials: cleanSerials.length > 0 ? cleanSerials : undefined, qty: addQty, originalQty: addQty, consumable: whItem.consumable }] };
         });
       }
       saveVisit({ ...visit, boxes: currentBoxes });
-      warehouseUpdates.forEach((wu) => saveWarehouseItem(wu));
       const box = visit.boxes.find((b) => b.id === boxId);
       logActivity("fill_box", `إضافة ${items.length} صنف إلى ${box?.name || "صندوق"}`, visit.name, visitId);
     },
@@ -522,49 +720,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [visits, logActivity]
   );
 
-  const handleReactivateVisit = useCallback(
-    (visitId: string) => {
-      const visit = visits.find((v) => v.id === visitId);
-      if (!visit) return;
-      const updated: Visit = {
-        ...visit,
-        status: "inactive",
-        boxes: visit.boxes.map((b) => ({
-          ...b,
-          items: b.items.map((bi) => ({ ...bi, qty: 0, returnedQty: undefined, status: undefined })),
-        })),
-      };
-      saveVisit(updated);
-      logActivity("deactivate_visit", `إعادة تفعيل زيارة: ${visit.name}`, "العودة إلى القالب", visitId);
-    },
-    [visits, logActivity]
-  );
-
   const handleFillBoxesFromTemplate = useCallback(
     (visitId: string) => {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
-      const needed: Record<string, number> = {};
-      visit.boxes.forEach((b) =>
-        b.items.forEach((bi) => { needed[bi.warehouseItemId] = (needed[bi.warehouseItemId] || 0) + bi.qty; })
-      );
       const updated: Visit = {
         ...visit,
         boxes: visit.boxes.map((b) => ({
           ...b,
-          items: b.items.map((bi) => ({ ...bi, qty: bi.qty })),
+          items: b.items.map((bi) => ({ ...bi, qty: bi.originalQty || bi.qty })),
         })),
       };
       saveVisit(updated);
-      Object.entries(needed).forEach(([id, req]) => {
-        if (req > 0) {
-          const whItem = warehouseItems.find((w) => w.id === id);
-          if (whItem) saveWarehouseItem({ ...whItem, totalQty: Math.max(0, whItem.totalQty - req) });
-        }
-      });
       logActivity("fill_box", `تعبئة صناديق من القالب: ${visit.name}`, undefined, visitId);
     },
-    [visits, warehouseItems, logActivity]
+    [visits, logActivity]
   );
 
   // ── Users ─────────────────────────────────────────
@@ -605,14 +775,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   return (
     <DataContext.Provider
       value={{
-        warehouseItems, visits, categories, activityLog, users, loading,
+        warehouseItems, visits, categories, activityLog, users, archivedVisits, loading,
         newNotificationCount, clearNotifications, setAuthUser: setAuthUserCallback,
         logActivity,
         handleAddWarehouseItem, handleEditWarehouseItem, handleDeleteWarehouseItem,
         handleAddCategory, handleEditCategory, handleDeleteCategory,
         handleAddVisit, handleDeleteVisit, handleToggleVisit, handleActivateVisit, handleCollectVisit,
         handleFillBox, handleReturnItems, handleAddBox, handleDeleteBox,
-        handleReactivateVisit, handleFillBoxesFromTemplate, handleUpdateBoxItemQty,
+        handleFillBoxesFromTemplate, handleUpdateBoxItemQty, handleToggleBoxItemSerial,
         handleAddItemToBox,
         handleBulkAddItemsToBox, handleBulkDeleteWarehouseItems,
         handleAddUser, handleEditUser, handleDeleteUser, handleToggleUser,

@@ -24,6 +24,45 @@ body {
   @apply bg-surface-0 text-slate-800 antialiased;
 }
 
+/* ── PWA: قفل الزوم + منع ارتداد الصفحة ─────────────────────── */
+html,
+body {
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safe area insets (notch / Dynamic Island / home indicator) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+@media (display-mode: standalone) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* تطبيق safe areas على الهيدر والـ sidebar في وضع التطبيق */
+@media (display-mode: standalone) {
+  header {
+    padding-top: calc(var(--sat) + 0px);
+  }
+  aside {
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
+  main {
+    padding-bottom: var(--sab);
+  }
+}
+
 @layer utilities {
   .scrollbar-none {
     -ms-overflow-style: none;

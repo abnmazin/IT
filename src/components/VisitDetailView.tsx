@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Visit, BoxItem, WarehouseItem, Category, VisitStatus, ActivityLogEntry, ACTIVITY_TYPE_LABELS } from "@/types";
-import { ArrowRight, Plus, Package, Play, Square, CheckCircle, X, AlertTriangle, ClipboardList, Clock } from "lucide-react";
+import { Visit, BoxItem, WarehouseItem, Category, VisitStatus, ActivityLogEntry } from "@/types";
+import { ArrowRight, Plus, Package, Square, X, AlertTriangle, ClipboardList, Clock, ShoppingCart } from "lucide-react";
 
 interface VisitDetailViewProps {
   visit: Visit;
@@ -12,7 +12,7 @@ interface VisitDetailViewProps {
   onBack: () => void;
   onSelectBox: (boxId: string) => void;
   onToggleVisit: (visitId: string) => void;
-  onActivateVisit: (visitId: string, year: string, hijriDate: string) => void;
+  onFillBoxes: (visitId: string) => void;
   onFillBox: (visitId: string, boxId: string, items: BoxItem[]) => void;
   onReturnItems: (visitId: string, boxId: string, returned: { warehouseItemId: string; qty: number }[]) => void;
   onAddBox: (visitId: string, name: string, label: string) => void;
@@ -43,24 +43,21 @@ export default function VisitDetailView({
   onBack,
   onSelectBox,
   onToggleVisit,
-  onActivateVisit,
+  onFillBoxes,
   onAddBox,
   onDeleteBox,
   onStartCollect,
 }: VisitDetailViewProps) {
   const [showAddBox, setShowAddBox] = useState(false);
-  const [showActivateConfirm, setShowActivateConfirm] = useState(false);
-  const [activateYear, setActivateYear] = useState(new Date().getFullYear().toString());
-  const [activateHijri, setActivateHijri] = useState("");
   const [boxName, setBoxName] = useState("");
   const [boxLabel, setBoxLabel] = useState("");
   const [showActivity, setShowActivity] = useState(false);
+  const [shortageOpen, setShortageOpen] = useState(false);
 
   const cfg = STATUS_CONFIG[visit.status];
   const isActive = visit.status === "active";
-  const isCollecting = visit.status === "collecting";
   const isInactive = visit.status === "inactive";
-  const isCompleted = visit.status === "completed";
+  const hasBoxes = visit.boxes.length > 0;
 
   const totalItems = visit.boxes.reduce(
     (a, b) => a + b.items.reduce((c, i) => c + i.qty, 0),
@@ -72,6 +69,33 @@ export default function VisitDetailView({
       .filter((e) => e.visitId === visit.id)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [activityLog, visit.id]);
+
+  const shortages = useMemo(() => {
+    const needed: Record<string, number> = {};
+    visit.boxes.forEach((b) =>
+      b.items.forEach((bi) => {
+        needed[bi.warehouseItemId] = (needed[bi.warehouseItemId] || 0) + bi.qty;
+      })
+    );
+    const list: { name: string; needed: number; available: number }[] = [];
+    for (const [itemId, reqQty] of Object.entries(needed)) {
+      if (reqQty <= 0) continue;
+      const whItem = warehouseItems.find((w) => w.id === itemId);
+      const avail = whItem?.totalQty || 0;
+      if (avail < reqQty) {
+        list.push({ name: whItem?.name || itemId, needed: reqQty, available: avail });
+      }
+    }
+    return list;
+  }, [visit, warehouseItems]);
+
+  const handleFillClick = () => {
+    if (shortages.length > 0) {
+      setShortageOpen(true);
+    } else {
+      onFillBoxes(visit.id);
+    }
+  };
 
   const handleAddBox = () => {
     if (!boxName.trim()) return;
@@ -111,15 +135,6 @@ export default function VisitDetailView({
           </p>
         </div>
         <div className="flex gap-1.5 shrink-0">
-          {isInactive && (
-            <button
-              onClick={() => setShowActivateConfirm(true)}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors min-h-[44px] active:scale-95"
-            >
-              <Play className="w-4 h-4" />
-              <span className="hidden sm:inline">تفعيل</span>
-            </button>
-          )}
           {isActive && (
             <>
               <button
@@ -138,52 +153,40 @@ export default function VisitDetailView({
               </button>
             </>
           )}
-          {isCompleted && null}
+          {isInactive && hasBoxes && (
+            <button
+              onClick={handleFillClick}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-violet-600 text-white rounded-xl text-sm font-medium hover:bg-violet-700 transition-colors min-h-[44px] active:scale-95"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span className="hidden sm:inline">تعبئة من القالب</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {showActivateConfirm && (
-        <div className="bg-white rounded-xl border border-emerald-200 p-4 space-y-3">
+      {shortageOpen && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-sm font-semibold text-slate-900">تأكيد تفعيل الزيارة</h3>
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-800">نقص في المخزن</h3>
           </div>
-          <p className="text-sm text-slate-600">
-            سيتم تفعيل الزيارة "<strong>{visit.name}</strong>" وفتح الصناديق للتعبئة.
-            {visit.boxes.length > 0 && ` يوجد ${visit.boxes.length} صندوق جاهز.`}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-medium text-slate-500 mb-1 block">السنة</label>
-              <input
-                type="text"
-                value={activateYear}
-                onChange={(e) => setActivateYear(e.target.value)}
-                placeholder="مثال: 2026"
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-slate-500 mb-1 block">التاريخ الهجري (اختياري)</label>
-              <input
-                type="text"
-                value={activateHijri}
-                onChange={(e) => setActivateHijri(e.target.value)}
-                placeholder="مثال: 1448 شوال"
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[44px]"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
+          <p className="text-xs text-amber-700">لا يكفي المخزن لتعبئة الصناديق بالكامل:</p>
+          {shortages.map((s, i) => (
+            <p key={i} className="text-xs text-amber-700 mr-2">
+              {s.name}: يحتاج {s.needed} — متوفر {s.available}
+            </p>
+          ))}
+          <div className="flex gap-2 pt-1">
             <button
-              onClick={() => { onActivateVisit(visit.id, activateYear, activateHijri); setShowActivateConfirm(false); }}
-              className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 min-h-[44px]"
+              onClick={() => { onFillBoxes(visit.id); setShortageOpen(false); }}
+              className="px-4 py-2.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 min-h-[44px]"
             >
-              تفعيل
+              متابعة بالتناقص
             </button>
             <button
-              onClick={() => setShowActivateConfirm(false)}
-              className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-200 min-h-[44px]"
+              onClick={() => setShortageOpen(false)}
+              className="px-4 py-2.5 bg-white text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 min-h-[44px]"
             >
               إلغاء
             </button>

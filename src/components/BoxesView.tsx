@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Visit, Box, Category } from "@/types";
 import { Package, Search, X, Power, FileSpreadsheet } from "lucide-react";
 import { exportBoxToExcel } from "@/lib/exportExcel";
+import ExportSettingsModal from "@/components/ExportSettingsModal";
 
 interface BoxesViewProps {
   visits: Visit[];
@@ -13,6 +14,7 @@ interface BoxesViewProps {
 
 export default function BoxesView({ visits, categories, onSelectBox }: BoxesViewProps) {
   const [search, setSearch] = useState("");
+  const [exportBox, setExportBox] = useState<Box | null>(null);
 
   const activeVisit = visits.find((v) => v.status === "active");
   const collectingVisit = visits.find((v) => v.status === "collecting");
@@ -96,7 +98,7 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
                     <Package className="w-4 h-4 text-sky-500" />
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); exportBoxToExcel(box, currentVisit.name, categories); }}
+                    onClick={(e) => { e.stopPropagation(); setExportBox(box); }}
                     className="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600 transition-colors"
                     title="تصدير Excel"
                   >
@@ -112,6 +114,18 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
             );
           })}
         </div>
+      )}
+
+      {exportBox && (
+        <ExportSettingsModal
+          title={`تصدير الصندوق: ${exportBox.name}`}
+          showFlatToggle={false}
+          onExport={(opts) => {
+            exportBoxToExcel(exportBox, currentVisit.name, categories, opts);
+            setExportBox(null);
+          }}
+          onClose={() => setExportBox(null)}
+        />
       )}
     </div>
   );

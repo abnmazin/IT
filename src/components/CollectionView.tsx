@@ -1,32 +1,34 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Visit, Box, BoxItem, WarehouseItem, Category, ItemCategory } from "@/types";
-import { ArrowRight, Package, CheckCircle, Tag, ChevronDown, ChevronUp, RotateCcw, Minus, Plus } from "lucide-react";
+import { Visit, WarehouseItem, Category, ItemCategory } from "@/types";
+import { ArrowRight, Package, CheckCircle, ChevronDown, ChevronUp, RotateCcw, Minus, Plus, Tag } from "lucide-react";
 
 interface CollectionViewProps {
   visit: Visit;
   warehouseItems: WarehouseItem[];
   categories: Category[];
   onBack: () => void;
-  onComplete: (visitId: string, collected: { warehouseItemId: string; qty: number; status: "returned" | "consumed" }[]) => void;
+  onComplete: (visitId: string, collected: { warehouseItemId: string; qty: number; returnedSerials?: string[]; status: "returned" | "consumed" | "missing" }[]) => void;
 }
 
 interface CollectItem {
   warehouseItemId: string;
   name: string;
   category: ItemCategory;
-  serialNumber?: string;
-  deployedQty: number;
-  returnedQty: number;
   consumable: boolean;
+  deployedQty: number;
+  serials?: string[];
+  outSerials?: string[];
+  inBoxCount: number;
+  returnedSerials: string[];
+  returnedQty: number;
   boxId: string;
   boxName: string;
 }
 
 export default function CollectionView({
   visit,
-  warehouseItems,
   categories,
   onBack,
   onComplete,
@@ -35,17 +37,38 @@ export default function CollectionView({
     const list: CollectItem[] = [];
     for (const box of visit.boxes) {
       for (const bi of box.items) {
-        list.push({
-          warehouseItemId: bi.warehouseItemId,
-          name: bi.name,
-          category: bi.category,
-          serialNumber: bi.serialNumber,
-          deployedQty: bi.qty,
-          returnedQty: bi.consumable ? 0 : bi.qty,
-          consumable: bi.consumable,
-          boxId: box.id,
-          boxName: box.name,
-        });
+        const serials = bi.serials || [];
+        const out = (bi.outSerials || []).filter((s) => serials.includes(s));
+        const sentQty = bi.originalQty || bi.qty;
+        if (serials.length > 0) {
+          list.push({
+            warehouseItemId: bi.warehouseItemId,
+            name: bi.name,
+            category: bi.category,
+            consumable: bi.consumable,
+            deployedQty: serials.length,
+            serials,
+            outSerials: out,
+            inBoxCount: serials.length - out.length,
+            returnedSerials: [],
+            returnedQty: 0,
+            boxId: box.id,
+            boxName: box.name,
+          });
+        } else {
+          list.push({
+            warehouseItemId: bi.warehouseItemId,
+            name: bi.name,
+            category: bi.category,
+            consumable: bi.consumable,
+            deployedQty: sentQty,
+            returnedQty: bi.qty,
+            inBoxCount: 0,
+            returnedSerials: [],
+            boxId: box.id,
+            boxName: box.name,
+          });
+        }
       }
     }
     return list;
@@ -56,11 +79,23 @@ export default function CollectionView({
 
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
 
+  const itemReturnedQty = (item: CollectItem) =>
+    item.serials && item.serials.length > 0
+      ? item.inBoxCount + item.returnedSerials.length
+      : item.returnedQty;
+
+  const itemMissingQty = (item: CollectItem) => {
+    if (item.serials && item.serials.length > 0) {
+      return (item.outSerials?.length || 0) - item.returnedSerials.length;
+    }
+    return item.deployedQty - item.returnedQty;
+  };
+
   const summary = useMemo(() => {
     const totalDeployed = items.reduce((a, i) => a + i.deployedQty, 0);
-    const totalReturned = items.reduce((a, i) => a + i.returnedQty, 0);
-    const totalConsumed = items.filter((i) => i.consumable).reduce((a, i) => a + (i.deployedQty - i.returnedQty), 0);
-    const totalMissing = items.filter((i) => !i.consumable).reduce((a, i) => a + (i.deployedQty - i.returnedQty), 0);
+    const totalReturned = items.reduce((a, i) => a + itemReturnedQty(i), 0);
+    const totalConsumed = items.filter((i) => i.consumable).reduce((a, i) => a + (i.deployedQty - itemReturnedQty(i)), 0);
+    const totalMissing = items.filter((i) => !i.consumable).reduce((a, i) => a + (i.deployedQty - itemReturnedQty(i)), 0);
     return { totalDeployed, totalReturned, totalConsumed, totalMissing };
   }, [items]);
 
@@ -92,20 +127,102 @@ export default function CollectionView({
     );
   };
 
-  const missingNonConsumable = items.filter(
-    (i) => !i.consumable && i.returnedQty < i.deployedQty
-  );
+  const toggleSerial = (warehouseItemId: string, serial: string) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.warehouseItemId !== warehouseItemId) return item;
+        const returnedSerials = item.returnedSerials.includes(serial)
+          ? item.returnedSerials.filter((s) => s !== serial)
+          : [...item.returnedSerials, serial];
+        return { ...item, returnedSerials };
+      })
+    );
+  };
+
+  const missingNonConsumable = items.filter((i) => !i.consumable && itemMissingQty(i) > 0);
 
   const handleComplete = () => {
-    const collected = items.map((i) => ({
-      warehouseItemId: i.warehouseItemId,
-      qty: i.returnedQty,
-      status: (i.returnedQty > 0 ? "returned" : "consumed") as "returned" | "consumed",
-    }));
+    const collected = items.map((i) => {
+      if (i.serials && i.serials.length > 0) {
+        return {
+          warehouseItemId: i.warehouseItemId,
+          qty: itemReturnedQty(i),
+          returnedSerials: i.returnedSerials,
+          status: (itemMissingQty(i) > 0 ? "missing" : "returned") as "returned" | "consumed" | "missing",
+        };
+      }
+      return {
+        warehouseItemId: i.warehouseItemId,
+        qty: i.returnedQty,
+        status: (i.returnedQty === i.deployedQty ? "returned" : i.consumable ? "consumed" : "missing") as "returned" | "consumed" | "missing",
+      };
+    });
     onComplete(visit.id, collected);
   };
 
-  const renderItem = (item: CollectItem) => {
+  const renderSerialItem = (item: CollectItem) => {
+    const returned = itemReturnedQty(item);
+    const missing = itemMissingQty(item);
+    const fullyReturned = missing === 0;
+    return (
+      <div key={item.warehouseItemId} className="px-3 sm:px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${fullyReturned ? "bg-emerald-100" : "bg-red-100"}`}>
+              {fullyReturned ? (
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <RotateCcw className="w-4 h-4 text-red-600" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-slate-800 truncate block">{item.name}</span>
+              <span className="text-[11px] text-slate-400">{catLabel(item.category)} · مُرسل: {item.deployedQty}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${fullyReturned ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+              عاد {returned}
+            </span>
+            {missing > 0 && <span className="text-[11px] font-bold text-red-600">-{missing}</span>}
+          </div>
+        </div>
+        <div className="mt-2 mr-10 flex flex-wrap gap-1.5">
+          {(item.serials || []).map((s) => {
+            const out = (item.outSerials || []).includes(s);
+            if (!out) {
+              return (
+                <span key={s} className="text-[10px] font-mono px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-500 flex items-center gap-1">
+                  <Tag className="w-3 h-3" />
+                  {s}
+                </span>
+              );
+            }
+            const returnedOut = item.returnedSerials.includes(s);
+            return (
+              <button
+                key={s}
+                onClick={() => toggleSerial(item.warehouseItemId, s)}
+                className={`text-[10px] font-mono px-2 py-1 rounded-lg border transition-colors min-h-[36px] flex items-center gap-1 ${
+                  returnedOut
+                    ? "bg-emerald-500 text-white border-emerald-500"
+                    : "bg-red-500 text-white border-red-500 hover:bg-red-600"
+                }`}
+              >
+                <Tag className="w-3 h-3" />
+                {s}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mr-10 mt-1 text-[10px] text-slate-400">
+          الأبيض داخل الصندوق (يعود تلقائياً) — اضغط الأحمر إذا عاد
+        </p>
+      </div>
+    );
+  };
+
+  const renderCountItem = (item: CollectItem) => {
     const missing = item.deployedQty - item.returnedQty;
     return (
       <div key={item.warehouseItemId} className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3">
@@ -122,9 +239,6 @@ export default function CollectionView({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
-              {item.serialNumber && (
-                <Tag className="w-3 h-3 text-sky-500 shrink-0" />
-              )}
               {item.consumable && (
                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1 py-0.5 rounded shrink-0">استهلاكي</span>
               )}
@@ -159,6 +273,9 @@ export default function CollectionView({
       </div>
     );
   };
+
+  const renderItem = (item: CollectItem) =>
+    item.serials && item.serials.length > 0 ? renderSerialItem(item) : renderCountItem(item);
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -225,7 +342,7 @@ export default function CollectionView({
         <div className="space-y-2">
           {Object.entries(groupedByBox).map(([boxId, group]) => {
             const isExpanded = expandedBox === boxId;
-            const boxReturned = group.items.reduce((a, i) => a + i.returnedQty, 0);
+            const boxReturned = group.items.reduce((a, i) => a + itemReturnedQty(i), 0);
             const boxTotal = group.items.reduce((a, i) => a + i.deployedQty, 0);
             return (
               <div key={boxId} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -259,7 +376,7 @@ export default function CollectionView({
       ) : (
         <div className="space-y-2">
           {Object.entries(groupedByCategory).map(([cat, catItems]) => {
-            const catReturned = catItems.reduce((a, i) => a + i.returnedQty, 0);
+            const catReturned = catItems.reduce((a, i) => a + itemReturnedQty(i), 0);
             const catTotal = catItems.reduce((a, i) => a + i.deployedQty, 0);
             return (
               <div key={cat} className="bg-white rounded-xl border border-slate-200 overflow-hidden">

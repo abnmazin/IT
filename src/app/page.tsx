@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { View, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useData } from "@/contexts/DataContext";
@@ -79,6 +79,51 @@ export default function Home() {
       setSelectedBoxId(null);
     }
   }, [user, activeView]);
+
+  const parseRoute = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      view: params.get("view") as View | null,
+      visit: params.get("visit"),
+      box: params.get("box"),
+    };
+  }, []);
+
+  const didInitRoute = useRef(false);
+
+  useEffect(() => {
+    if (!user || didInitRoute.current) return;
+    didInitRoute.current = true;
+    const { view, visit, box } = parseRoute();
+    if (view && ROLE_ALLOWED_VIEWS[user.role].includes(view)) {
+      setActiveView(view);
+    }
+    if (visit) setSelectedVisitId(visit);
+    if (box) setSelectedBoxId(box);
+  }, [user, parseRoute]);
+
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams();
+    params.set("view", activeView);
+    if (selectedVisitId) params.set("visit", selectedVisitId);
+    if (selectedBoxId) params.set("box", selectedBoxId);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [user, activeView, selectedVisitId, selectedBoxId]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const { view, visit, box } = parseRoute();
+      if (user) {
+        const allowed = ROLE_ALLOWED_VIEWS[user.role];
+        setActiveView(view && allowed.includes(view) ? view : allowed[0]);
+        setSelectedVisitId(visit || null);
+        setSelectedBoxId(box || null);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [user, parseRoute]);
 
   if (authLoading || data.loading) {
     return (
@@ -166,22 +211,24 @@ export default function Home() {
               visitName={selectedVisit.name}
               categories={data.categories}
               warehouseItems={data.warehouseItems}
+              visits={data.visits}
               readonly={isViewer}
+              visitStatus={selectedVisit.status}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
                 data.handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
+              }}
+              onToggleItemSerial={(boxId, warehouseItemId, serial) => {
+                data.handleToggleBoxItemSerial(selectedVisit.id, boxId, warehouseItemId, serial);
               }}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (
             <VisitsView
               visits={data.visits}
-              warehouseItems={data.warehouseItems}
               onSelectVisit={setSelectedVisitId}
               onAddVisit={data.handleAddVisit}
-              onToggleVisit={data.handleToggleVisit}
-              onReactivateVisit={data.handleReactivateVisit}
-              onFillBoxes={data.handleFillBoxesFromTemplate}
+              onActivateVisit={data.handleActivateVisit}
               onDeleteVisit={data.handleDeleteVisit}
             />
           )}
@@ -194,7 +241,7 @@ export default function Home() {
               onBack={() => setSelectedVisitId(null)}
               onSelectBox={setSelectedBoxId}
               onToggleVisit={data.handleToggleVisit}
-              onActivateVisit={data.handleActivateVisit}
+              onFillBoxes={data.handleFillBoxesFromTemplate}
               onFillBox={data.handleFillBox}
               onReturnItems={data.handleReturnItems}
               onAddBox={data.handleAddBox}
@@ -224,10 +271,15 @@ export default function Home() {
               visitName={selectedVisit.name}
               categories={data.categories}
               warehouseItems={data.warehouseItems}
+              visits={data.visits}
               readonly={isViewer}
+              visitStatus={selectedVisit.status}
               onBack={() => setSelectedBoxId(null)}
               onUpdateItemQty={(boxId, warehouseItemId, delta) => {
                 data.handleUpdateBoxItemQty(selectedVisit.id, boxId, warehouseItemId, delta);
+              }}
+              onToggleItemSerial={(boxId, warehouseItemId, serial) => {
+                data.handleToggleBoxItemSerial(selectedVisit.id, boxId, warehouseItemId, serial);
               }}
               onAddItemToBox={data.handleAddItemToBox}
               visitId={selectedVisit.id}
@@ -235,7 +287,7 @@ export default function Home() {
           )}
           {activeView === "completed-visits" && (
             <CompletedVisitsView
-              visits={data.visits}
+              archivedVisits={data.archivedVisits}
               categories={data.categories}
               onSelectVisit={(visitId) => setSelectedVisitId(visitId)}
             />

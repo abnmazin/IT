@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { Visit, Category } from "@/types";
+import { useMemo, useState } from "react";
+import { Visit, Category, getItemReturnedSerials, getItemMissingSerials } from "@/types";
 import { ArrowRight, Package, CheckCircle, Trash2, AlertTriangle, Tag, FileSpreadsheet } from "lucide-react";
 import { exportVisitReportToExcel } from "@/lib/exportExcel";
+import ExportSettingsModal from "@/components/ExportSettingsModal";
 
 interface VisitReportProps {
   visit: Visit;
@@ -13,31 +14,34 @@ interface VisitReportProps {
 
 export default function VisitReport({ visit, categories, onBack }: VisitReportProps) {
   const catLabel = (key: string) => categories.find((c) => c.key === key)?.label || key;
+  const [showExport, setShowExport] = useState(false);
 
   const report = useMemo(() => {
     const allItems = visit.boxes.flatMap((b) =>
-      b.items.map((bi) => ({
-        ...bi,
-        boxName: b.name,
-      }))
+      b.items.map((bi) => {
+        const deployedQty = bi.originalQty || bi.qty;
+        const returnedQty = bi.returnedQty ?? (bi.status === "returned" ? bi.qty : 0);
+        const shortage = deployedQty - returnedQty;
+        const consumedQty = bi.consumable ? shortage : 0;
+        const missingQty = !bi.consumable ? shortage : 0;
+        const status = bi.status || (returnedQty === deployedQty ? "returned" : bi.consumable ? "consumed" : "missing");
+        return { ...bi, deployedQty, returnedQty, consumedQty, missingQty, status, boxName: b.name };
+      })
     );
 
-    const returned = allItems.filter((i) => i.status === "returned");
     const consumed = allItems.filter((i) => i.status === "consumed");
     const missing = allItems.filter((i) => i.status === "missing");
-    const unknown = allItems.filter((i) => !i.status);
 
     return {
       total: allItems.length,
-      totalDeployedQty: allItems.reduce((a, i) => a + i.qty, 0),
-      returned,
-      returnedQty: returned.reduce((a, i) => a + i.qty, 0),
+      totalDeployedQty: allItems.reduce((a, i) => a + i.deployedQty, 0),
+      returnedQty: allItems.reduce((a, i) => a + i.returnedQty, 0),
       consumed,
-      consumedQty: consumed.reduce((a, i) => a + i.qty, 0),
+      consumedQty: consumed.reduce((a, i) => a + i.consumedQty, 0),
       missing,
-      missingQty: missing.reduce((a, i) => a + i.qty, 0),
-      unknown,
-      unknownQty: unknown.reduce((a, i) => a + i.qty, 0),
+      missingQty: missing.reduce((a, i) => a + i.missingQty, 0),
+      unknown: allItems.filter((i) => !i.status),
+      unknownQty: allItems.filter((i) => !i.status).reduce((a, i) => a + i.qty, 0),
     };
   }, [visit]);
 
@@ -64,13 +68,26 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
           </p>
         </div>
         <button
-          onClick={() => exportVisitReportToExcel(visit, categories)}
+          onClick={() => setShowExport(true)}
           className="flex items-center gap-2 px-3 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-medium hover:bg-emerald-100 transition-colors shrink-0 min-h-[44px]"
         >
           <FileSpreadsheet className="w-4 h-4" />
           تصدير Excel
         </button>
       </div>
+
+      {showExport && (
+        <ExportSettingsModal
+          title={`تصدير تقرير الزيارة: ${visit.name}`}
+          boxes={visit.boxes.map((b) => ({ id: b.id, name: b.name }))}
+          flatLabel="كل الأصناف (مسطح)"
+          onExport={(opts) => {
+            exportVisitReportToExcel(visit, categories, opts);
+            setShowExport(false);
+          }}
+          onClose={() => setShowExport(false)}
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
         <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
@@ -103,13 +120,19 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
           </div>
           <div className="space-y-1">
             {missingNonConsumable.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm text-red-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                <span>{item.name}</span>
-                <span className="text-red-500">× {item.qty}</span>
-                <span className="text-red-400">({item.boxName})</span>
-                {item.serialNumber && (
-                  <span className="text-[11px] font-mono text-red-500">{item.serialNumber}</span>
+              <div key={i} className="flex flex-col gap-0.5 text-sm text-red-700">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                  <span>{item.name}</span>
+                  <span className="text-red-500">× {item.missingQty}</span>
+                  <span className="text-red-400">({item.boxName})</span>
+                </div>
+                {item.serials && item.serials.length > 0 && (
+                  <div className="mr-5 flex flex-wrap gap-1">
+                    {getItemMissingSerials(item).map((s) => (
+                      <span key={s} className="text-[10px] font-mono text-red-500 bg-red-50 px-1.5 py-0.5 rounded">{s}</span>
+                    ))}
+                  </div>
                 )}
               </div>
             ))}
@@ -152,14 +175,24 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-slate-800 truncate">{item.name}</span>
-                        {item.serialNumber && (
-                          <span className="text-[11px] text-sky-600 font-mono bg-sky-50 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
-                            <Tag className="w-3 h-3" />
-                            {item.serialNumber}
-                          </span>
-                        )}
                       </div>
                       <span className="text-[11px] text-slate-400">{catLabel(item.category)}</span>
+                      {item.serials && item.serials.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {getItemReturnedSerials(item).map((s) => (
+                            <span key={s} className="text-[10px] text-emerald-600 font-mono bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              {s}
+                            </span>
+                          ))}
+                          {getItemMissingSerials(item).map((s) => (
+                            <span key={s} className="text-[10px] text-red-600 font-mono bg-red-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <Tag className="w-3 h-3" />
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
