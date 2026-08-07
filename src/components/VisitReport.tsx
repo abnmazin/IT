@@ -90,7 +90,7 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
-        <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+        <div className="card p-3 text-center">
           <p className="text-xl font-bold text-slate-900">{report.totalDeployedQty}</p>
           <p className="text-[11px] text-slate-500">إجمالي المُرسل</p>
         </div>
@@ -147,7 +147,7 @@ export default function VisitReport({ visit, categories, onBack }: VisitReportPr
         const boxTotal = box.items.reduce((a, i) => a + i.qty, 0);
 
         return (
-          <div key={box.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div key={box.id} className="card overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-slate-400" />

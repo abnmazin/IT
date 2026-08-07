@@ -205,7 +205,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 space-y-3">
+        <div className="card p-3 sm:p-4 space-y-3">
           <div>
             <p className="text-[11px] font-medium text-slate-500 mb-2">نوع النشاط</p>
             <div className="flex flex-wrap gap-1.5">
@@ -288,7 +288,7 @@ export default function ActivityLogView({ activityLog, visits }: ActivityLogView
       )}
 
       {/* Log entries */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden">
         {filtered.length === 0 ? (
           <div className="py-16 text-center">
             <Search className="w-8 h-8 text-slate-300 mx-auto mb-3" />

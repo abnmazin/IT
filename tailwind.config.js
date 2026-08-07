@@ -4,6 +4,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
         sidebar: {
           bg: "#0f172a",
           hover: "#1e293b",
@@ -12,10 +24,10 @@ module.exports = {
           accent: "#38bdf8",
         },
         surface: {
-          0: "#f8fafc",
+          0: "#f1f5f9",
           1: "#ffffff",
-          2: "#f1f5f9",
-          3: "#e2e8f0",
+          2: "#f8fafc",
+          3: "#cbd5e1",
         },
       },
     },

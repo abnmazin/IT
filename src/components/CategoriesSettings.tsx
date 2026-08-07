@@ -67,7 +67,7 @@ export default function CategoriesSettings({
         </h2>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors min-h-[44px]"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium transition-colors min-h-[44px]"
         >
           <Plus className="w-4 h-4" />
           إضافة فئة
@@ -75,7 +75,7 @@ export default function CategoriesSettings({
       </div>
 
       {/* Desktop grid */}
-      <div className="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="hidden sm:block card overflow-hidden">
         <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-4 items-center px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500 uppercase tracking-wider">
           <span>المفتاح (EN)</span>
           <span>الاسم (AR)</span>
@@ -117,12 +117,12 @@ export default function CategoriesSettings({
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {categories.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <div className="card p-8 text-center">
             <p className="text-sm text-slate-400">لا توجد فئات.</p>
           </div>
         ) : (
           categories.map((cat) => (
-            <div key={cat.id} className="bg-white rounded-xl border border-slate-200 p-3.5">
+            <div key={cat.id} className="card p-3.5">
               <div className="flex items-start justify-between mb-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function CategoriesSettings({
                 <button
                   type="submit"
                   disabled={!key.trim() || !label.trim()}
-                  className="flex-1 h-11 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
+                  className="flex-1 h-11 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   {editingCat ? "حفظ التعديلات" : "إضافة"}
                 </button>

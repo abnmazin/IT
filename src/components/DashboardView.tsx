@@ -141,7 +141,7 @@ export default function DashboardView({
       </div>
 
       {visitStats.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5">
+        <div className="card p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="w-4 h-4 text-sky-500" />
             <h2 className="text-sm font-semibold text-slate-800">مقارنة الزيارات المكتملة</h2>

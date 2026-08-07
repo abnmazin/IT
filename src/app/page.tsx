@@ -221,6 +221,9 @@ export default function Home() {
               onToggleItemSerial={(boxId, warehouseItemId, serial) => {
                 data.handleToggleBoxItemSerial(selectedVisit.id, boxId, warehouseItemId, serial);
               }}
+              onAddItemToBox={data.handleAddItemToBox}
+              onBulkAddItemsToBox={data.handleBulkAddItemsToBox}
+              visitId={selectedVisit.id}
             />
           )}
           {activeView === "visits" && !selectedVisitId && (
@@ -282,6 +285,7 @@ export default function Home() {
                 data.handleToggleBoxItemSerial(selectedVisit.id, boxId, warehouseItemId, serial);
               }}
               onAddItemToBox={data.handleAddItemToBox}
+              onBulkAddItemsToBox={data.handleBulkAddItemsToBox}
               visitId={selectedVisit.id}
             />
           )}

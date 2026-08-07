@@ -18,6 +18,7 @@ interface BoxDetailViewProps {
   onUpdateItemQty: (boxId: string, warehouseItemId: string, delta: number) => void;
   onToggleItemSerial?: (boxId: string, warehouseItemId: string, serial: string) => void;
   onAddItemToBox?: (visitId: string, boxId: string, warehouseItemId: string, qty: number, serials?: string[]) => void;
+  onBulkAddItemsToBox?: (visitId: string, boxId: string, items: { warehouseItemId: string; qty: number; serials?: string[] }[]) => void;
   visitId?: string;
 }
 
@@ -33,6 +34,7 @@ export default function BoxDetailView({
   onUpdateItemQty,
   onToggleItemSerial,
   onAddItemToBox,
+  onBulkAddItemsToBox,
   visitId,
 }: BoxDetailViewProps) {
   const [currentQty, setCurrentQty] = useState<Record<string, number>>(
@@ -43,6 +45,7 @@ export default function BoxDetailView({
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("All");
   const [addPicks, setAddPicks] = useState<Record<string, string[]>>({});
+  const [qtyPicks, setQtyPicks] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setCurrentQty(Object.fromEntries(box.items.map((i) => [i.warehouseItemId, i.qty])));
@@ -113,10 +116,56 @@ export default function BoxDetailView({
         onAddItemToBox(visitId, box.id, item.id, picks.length, picks);
         setAddPicks((prev) => ({ ...prev, [item.id]: [] }));
       } else {
-        onAddItemToBox(visitId, box.id, item.id, 1);
+        const qty = qtyPicks[item.id] ?? 1;
+        if (qty <= 0) return;
+        onAddItemToBox(visitId, box.id, item.id, qty);
+        setQtyPicks((prev) => ({ ...prev, [item.id]: 0 }));
       }
     }
   };
+
+  const setRowQty = (itemId: string, qty: number, max: number) => {
+    const clamped = Math.max(0, Math.min(max, Number.isFinite(qty) ? qty : 0));
+    setQtyPicks((prev) => ({ ...prev, [itemId]: clamped }));
+  };
+
+  const totalToAdd = useMemo(() => {
+    let n = 0;
+    for (const item of availableItems) {
+      if (isSerialCategory(categories, item.category)) {
+        n += (addPicks[item.id] || []).length;
+      } else {
+        n += qtyPicks[item.id] ?? 1;
+      }
+    }
+    return n;
+  }, [availableItems, categories, addPicks, qtyPicks]);
+
+  const handleAddAll = () => {
+    if (!visitId || !onBulkAddItemsToBox) return;
+    const items: { warehouseItemId: string; qty: number; serials?: string[] }[] = [];
+    for (const item of availableItems) {
+      if (isSerialCategory(categories, item.category)) {
+        const picks = addPicks[item.id] || [];
+        if (picks.length > 0) items.push({ warehouseItemId: item.id, qty: picks.length, serials: picks });
+      } else {
+        const qty = qtyPicks[item.id] ?? 1;
+        if (qty > 0) items.push({ warehouseItemId: item.id, qty });
+      }
+    }
+    if (items.length === 0) return;
+    onBulkAddItemsToBox(visitId, box.id, items);
+    setQtyPicks({});
+    setAddPicks({});
+  };
+
+  const openAddPanel = () => {
+    setQtyPicks({});
+    setAddPicks({});
+    setShowAddItem(true);
+  };
+
+  const closeAddPanel = () => setShowAddItem(false);
 
   const togglePick = (itemId: string, serial: string) => {
     setAddPicks((prev) => {
@@ -167,7 +216,7 @@ export default function BoxDetailView({
       {!readonly && onAddItemToBox && visitId && (
         <div className="flex gap-2">
           <button
-            onClick={() => setShowAddItem(!showAddItem)}
+            onClick={showAddItem ? closeAddPanel : openAddPanel}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors min-h-[44px] ${
               showAddItem ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
@@ -179,10 +228,10 @@ export default function BoxDetailView({
       )}
 
       {showAddItem && (
-        <div className="bg-white rounded-xl border border-sky-200 p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">إضافة صنف من المخزن</h3>
-            <button onClick={() => setShowAddItem(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
+            <button onClick={closeAddPanel} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
               <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
@@ -208,13 +257,14 @@ export default function BoxDetailView({
               ))}
             </select>
           </div>
-          <div className="max-h-48 overflow-y-auto space-y-1">
+          <div className="max-h-72 overflow-y-auto space-y-1">
             {availableItems.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">لا توجد عناصر متاحة</p>
             ) : (
               availableItems.map((item) => {
                 const serials = isSerialCategory(categories, item.category) ? (availableSerials.get(item.id) || []) : [];
                 const picks = addPicks[item.id] || [];
+                const isSerial = isSerialCategory(categories, item.category);
                 return (
                   <div
                     key={item.id}
@@ -227,14 +277,49 @@ export default function BoxDetailView({
                         </div>
                         <span className="text-[11px] text-slate-400">{catLabel(item.category)} · متوفر: {item.totalQty}</span>
                       </div>
-                      <button
-                        onClick={() => handleAddItem(item)}
-                        disabled={serials.length > 0 && picks.length === 0}
-                        className="flex items-center gap-1 px-3 py-2 bg-sky-500 text-white rounded-lg text-xs font-medium hover:bg-sky-600 disabled:opacity-40 transition-colors min-h-[36px] shrink-0"
-                      >
-                        <Send className="w-3 h-3" />
-                        إضافة
-                      </button>
+                      {!isSerial ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => setRowQty(item.id, (qtyPicks[item.id] ?? 1) - 1, item.totalQty)}
+                            disabled={(qtyPicks[item.id] ?? 1) <= 0}
+                            className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 disabled:opacity-30 transition-colors"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            max={item.totalQty}
+                            value={qtyPicks[item.id] ?? 1}
+                            onChange={(e) => setRowQty(item.id, Number(e.target.value), item.totalQty)}
+                            className="w-14 text-center text-sm font-bold border border-slate-200 rounded-lg py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                          />
+                          <button
+                            onClick={() => setRowQty(item.id, (qtyPicks[item.id] ?? 1) + 1, item.totalQty)}
+                            disabled={(qtyPicks[item.id] ?? 1) >= item.totalQty}
+                            className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30 transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleAddItem(item)}
+                            disabled={(qtyPicks[item.id] ?? 1) <= 0}
+                            className="flex items-center gap-1 px-3 py-2 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 disabled:opacity-40 transition-colors min-h-[36px]"
+                          >
+                            <Send className="w-3 h-3" />
+                            إضافة
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAddItem(item)}
+                          disabled={picks.length === 0}
+                          className="flex items-center gap-1 px-3 py-2 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 disabled:opacity-40 transition-colors min-h-[36px] shrink-0"
+                        >
+                          <Send className="w-3 h-3" />
+                          إضافة ({picks.length})
+                        </button>
+                      )}
                     </div>
                     {serials.length > 0 && (
                       <div className="mt-1.5 mr-4 flex flex-wrap gap-1.5">
@@ -260,10 +345,19 @@ export default function BoxDetailView({
               })
             )}
           </div>
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
+            <span className="text-sm text-slate-600">
+              محدد: <span className="font-bold text-sky-700">{totalToAdd}</span> قطعة
+            </span>
+            <button onClick={handleAddAll} disabled={totalToAdd === 0} className="btn-success">
+              <Send className="w-4 h-4" />
+              إضافة المحدد
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden">
         {box.items.length === 0 ? (
           <div className="py-16 text-center">
             <Package className="w-8 h-8 text-slate-300 mx-auto mb-3" />

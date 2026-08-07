@@ -293,7 +293,7 @@ export default function CollectionView({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+        <div className="card p-3 text-center">
           <p className="text-lg sm:text-xl font-bold text-slate-900">{summary.totalDeployed}</p>
           <p className="text-[11px] text-slate-500">المُرسل</p>
         </div>
@@ -345,7 +345,7 @@ export default function CollectionView({
             const boxReturned = group.items.reduce((a, i) => a + itemReturnedQty(i), 0);
             const boxTotal = group.items.reduce((a, i) => a + i.deployedQty, 0);
             return (
-              <div key={boxId} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div key={boxId} className="card overflow-hidden">
                 <button
                   onClick={() => setExpandedBox(isExpanded ? null : boxId)}
                   className="w-full flex items-center justify-between px-3 sm:px-4 py-3.5 hover:bg-slate-50 transition-colors min-h-[48px]"
@@ -379,7 +379,7 @@ export default function CollectionView({
             const catReturned = catItems.reduce((a, i) => a + itemReturnedQty(i), 0);
             const catTotal = catItems.reduce((a, i) => a + i.deployedQty, 0);
             return (
-              <div key={cat} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div key={cat} className="card overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-800">{catLabel(cat)}</span>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { WarehouseItem, Category, Visit, isSerialCategory, getItemSerials } from "@/types";
-import { Search, Plus, Package, Trash2, X, Send, Check, ChevronDown, ChevronUp, Hash, FileSpreadsheet } from "lucide-react";
+import { Search, Plus, Minus, Package, Trash2, X, Send, Check, ChevronDown, ChevronUp, Hash, FileSpreadsheet } from "lucide-react";
 import { exportWarehouseToExcel } from "@/lib/exportExcel";
 import ExportSettingsModal from "@/components/ExportSettingsModal";
 
@@ -79,6 +79,8 @@ export default function WarehouseView({
   const [singleSendVisitId, setSingleSendVisitId] = useState("");
   const [singleSendBoxId, setSingleSendBoxId] = useState("");
   const [singleSendPicks, setSingleSendPicks] = useState<string[]>([]);
+  const [singleSendQty, setSingleSendQty] = useState(1);
+  const [bulkQtys, setBulkQtys] = useState<Record<string, number>>({});
 
   const activeVisits = useMemo(() => visits.filter((v) => v.status === "active"), [visits]);
 
@@ -266,6 +268,7 @@ export default function WarehouseView({
       if (isSerialCategory(categories, item.category)) picks[item.id] = [];
     });
     setSerialPicks(picks);
+    setBulkQtys({});
     setShowBulkSend(true);
   };
 
@@ -285,7 +288,8 @@ export default function WarehouseView({
           const picks = serialPicks[item.id] || [];
           return { warehouseItemId: item.id, qty: picks.length, serials: picks };
         }
-        return { warehouseItemId: item.id, qty: Math.min(1, item.totalQty) };
+        const qty = Math.max(0, Math.min(item.totalQty, bulkQtys[item.id] ?? 1));
+        return { warehouseItemId: item.id, qty, serials: undefined };
       })
       .filter((i) => i.qty > 0);
     if (itemsToSend.length === 0) return;
@@ -294,16 +298,37 @@ export default function WarehouseView({
     setShowBulkSend(false);
   };
 
+  const bulkTotalQty = useMemo(() => {
+    let n = 0;
+    for (const item of selectedItems) {
+      if (isSerialCategory(categories, item.category)) {
+        n += (serialPicks[item.id] || []).length;
+      } else {
+        n += Math.max(0, bulkQtys[item.id] ?? 1);
+      }
+    }
+    return n;
+  }, [selectedItems, categories, serialPicks, bulkQtys]);
+
+  const setBulkQty = (itemId: string, qty: number, max: number) => {
+    const clamped = Math.max(0, Math.min(max, Number.isFinite(qty) ? qty : 0));
+    setBulkQtys((prev) => ({ ...prev, [itemId]: clamped }));
+  };
+
   const openSingleSend = (item: WarehouseItem) => {
     setSingleSend(item);
     setSingleSendVisitId(activeVisits[0]?.id || "");
     setSingleSendBoxId(activeVisits[0]?.boxes[0]?.id || "");
     setSingleSendPicks([]);
+    setSingleSendQty(1);
   };
 
   const handleSingleSend = () => {
     if (!singleSend || !singleSendVisitId || !singleSendBoxId) return;
-    onAddItemToBox(singleSendVisitId, singleSendBoxId, singleSend.id, singleSendPicks.length, singleSendPicks);
+    const serial = isSerialCategory(categories, singleSend.category);
+    const qty = serial ? singleSendPicks.length : singleSendQty;
+    if (qty <= 0) return;
+    onAddItemToBox(singleSendVisitId, singleSendBoxId, singleSend.id, qty, serial ? singleSendPicks : undefined);
     setSingleSend(null);
   };
 
@@ -446,7 +471,7 @@ export default function WarehouseView({
       </div>
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">
               {editingItem ? "تعديل الصنف" : "إضافة صنف جديد"}
@@ -687,13 +712,7 @@ export default function WarehouseView({
                       <div className="flex gap-1.5 w-full" onClick={(e) => e.stopPropagation()}>
                         {activeVisits.length > 0 && (
                           <button
-                            onClick={() => {
-                              if (isSerial) {
-                                openSingleSend(item);
-                              } else {
-                                onAddItemToBox(activeVisits[0].id, activeVisits[0].boxes[0]?.id || "", item.id, Math.min(1, item.totalQty));
-                              }
-                            }}
+                            onClick={() => openSingleSend(item)}
                             className="flex-1 py-2.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[11px] font-medium transition-colors min-h-[44px] flex items-center justify-center gap-1"
                           >
                             <Send className="w-3.5 h-3.5" />
@@ -722,7 +741,7 @@ export default function WarehouseView({
         );
       })}
       {filtered.length === 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
+        <div className="card p-8 sm:p-12 text-center">
           <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-400">لا توجد عناصر في المخزن.</p>
         </div>
@@ -792,10 +811,38 @@ export default function WarehouseView({
             <div className="bg-slate-50 rounded-xl p-3 max-h-40 overflow-y-auto space-y-2">
               {selectedItems.map((item) => (
                 <div key={item.id} className="text-xs">
-                  <div className="flex items-center gap-2 text-slate-700">
-                    <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate">{item.name}</span>
-                    <span className="text-slate-400 shrink-0">({item.totalQty})</span>
+                  <div className="flex items-center justify-between gap-2 text-slate-700">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{item.name}</span>
+                      <span className="text-slate-400 shrink-0">({item.totalQty})</span>
+                    </div>
+                    {!isSerialCategory(categories, item.category) && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => setBulkQty(item.id, (bulkQtys[item.id] ?? 1) - 1, item.totalQty)}
+                          disabled={(bulkQtys[item.id] ?? 1) <= 0}
+                          className="w-7 h-7 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.totalQty}
+                          value={bulkQtys[item.id] ?? 1}
+                          onChange={(e) => setBulkQty(item.id, Number(e.target.value), item.totalQty)}
+                          className="w-12 text-center text-sm font-bold border border-slate-200 rounded-md py-1"
+                        />
+                        <button
+                          onClick={() => setBulkQty(item.id, (bulkQtys[item.id] ?? 1) + 1, item.totalQty)}
+                          disabled={(bulkQtys[item.id] ?? 1) >= item.totalQty}
+                          className="w-7 h-7 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {isSerialCategory(categories, item.category) && (
                     <div className="mt-1.5 mr-6 flex flex-wrap gap-1.5">
@@ -844,12 +891,16 @@ export default function WarehouseView({
                 ))}
               </select>
             )}
+            <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-xs">
+              <span className="text-emerald-700">الإجمالي المرسل</span>
+              <span className="font-bold text-emerald-700 text-sm">{bulkTotalQty} قطعة</span>
+            </div>
             <button
-              disabled={!sendVisitId || !sendBoxId}
+              disabled={!sendVisitId || !sendBoxId || bulkTotalQty <= 0}
               onClick={handleBulkSend}
               className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              إرسال الأصناف المحددة
+              إرسال الأصناف المحددة ({bulkTotalQty})
             </button>
           </div>
         </div>
@@ -864,26 +915,59 @@ export default function WarehouseView({
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {availableSerials(singleSend).map((s) => {
-                const picked = singleSendPicks.includes(s);
-                return (
+            {isSerialCategory(categories, singleSend.category) ? (
+              <div className="flex flex-wrap gap-1.5">
+                {availableSerials(singleSend).map((s) => {
+                  const picked = singleSendPicks.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSingleSendPicks((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
+                      className={`text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors min-h-[44px] flex items-center gap-1 ${
+                        picked ? "bg-emerald-500 text-white border-emerald-500" : "bg-white text-slate-600 border-slate-200 hover:border-emerald-300"
+                      }`}
+                    >
+                      {picked && <Check className="w-3.5 h-3.5" />}
+                      {s}
+                    </button>
+                  );
+                })}
+                {availableSerials(singleSend).length === 0 && (
+                  <p className="text-sm text-red-500 w-full text-center py-2">لا توجد أرقام متاحة لهذا الجهاز</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-500">الكمية المتوفرة: {singleSend.totalQty}</span>
+                  <span className="text-xs font-bold text-emerald-700">{singleSendQty} قطعة</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <button
-                    key={s}
-                    onClick={() => setSingleSendPicks((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s])}
-                    className={`text-xs font-mono px-3 py-1.5 rounded-lg border transition-colors min-h-[44px] flex items-center gap-1 ${
-                      picked ? "bg-emerald-500 text-white border-emerald-500" : "bg-white text-slate-600 border-slate-200 hover:border-emerald-300"
-                    }`}
+                    onClick={() => setSingleSendQty((q) => Math.max(1, q - 1))}
+                    disabled={singleSendQty <= 1}
+                    className="w-11 h-11 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-30 transition-colors min-h-[44px]"
                   >
-                    {picked && <Check className="w-3.5 h-3.5" />}
-                    {s}
+                    <Minus className="w-4 h-4" />
                   </button>
-                );
-              })}
-              {availableSerials(singleSend).length === 0 && (
-                <p className="text-sm text-red-500 w-full text-center py-2">لا توجد أرقام متاحة لهذا الجهاز</p>
-              )}
-            </div>
+                  <input
+                    type="number"
+                    min={1}
+                    max={singleSend.totalQty}
+                    value={singleSendQty}
+                    onChange={(e) => setSingleSendQty(Math.max(1, Math.min(singleSend.totalQty, Number(e.target.value))))}
+                    className="flex-1 text-center text-lg font-bold border border-slate-200 rounded-lg py-2.5 min-h-[44px]"
+                  />
+                  <button
+                    onClick={() => setSingleSendQty((q) => Math.min(singleSend.totalQty, q + 1))}
+                    disabled={singleSendQty >= singleSend.totalQty}
+                    className="w-11 h-11 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 hover:bg-emerald-200 disabled:opacity-30 transition-colors min-h-[44px]"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
             <select
               value={singleSendVisitId}
               onChange={(e) => { setSingleSendVisitId(e.target.value); setSingleSendBoxId(""); }}
@@ -907,11 +991,15 @@ export default function WarehouseView({
               </select>
             )}
             <button
-              disabled={!singleSendVisitId || !singleSendBoxId || singleSendPicks.length === 0}
+              disabled={
+                !singleSendVisitId ||
+                !singleSendBoxId ||
+                (isSerialCategory(categories, singleSend.category) ? singleSendPicks.length === 0 : singleSendQty <= 0)
+              }
               onClick={handleSingleSend}
               className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              إرسال {singleSendPicks.length} جهاز
+              إرسال {isSerialCategory(categories, singleSend.category) ? singleSendPicks.length : singleSendQty} قطعة
             </button>
           </div>
         </div>

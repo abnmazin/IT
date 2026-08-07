@@ -91,7 +91,7 @@ export default function BoxesView({ visits, categories, onSelectBox }: BoxesView
               <button
                 key={box.id}
                 onClick={() => onSelectBox(currentVisit.id, box.id)}
-                className="text-right p-3 sm:p-4 rounded-xl border border-sky-200 bg-white transition-all hover:shadow-md hover:border-sky-300 active:scale-[0.98]"
+                className="text-right p-3 sm:p-4 rounded-2xl border border-sky-200 bg-white shadow-sm transition-all hover:shadow-md hover:border-sky-300 active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center">

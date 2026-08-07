@@ -149,7 +149,7 @@ export default function VisitsView({
       </div>
 
       {showAdd && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">إضافة زيارة جديدة</h3>
             <button onClick={() => setShowAdd(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
@@ -216,7 +216,7 @@ export default function VisitsView({
       )}
 
       {visits.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
+          <div className="card p-8 sm:p-12 text-center">
           <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm text-slate-400">لا توجد زيارات بعد.</p>
         </div>

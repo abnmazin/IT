@@ -218,7 +218,7 @@ export default function VisitDetailView({
       )}
 
       {showAddBox && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-900">إضافة صندوق جديد</h3>
             <button onClick={() => setShowAddBox(false)} className="p-2 rounded-lg hover:bg-slate-100 min-w-[36px] min-h-[36px] flex items-center justify-center">
@@ -253,7 +253,7 @@ export default function VisitDetailView({
       )}
 
       {showActivity && visitActivity.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
             <h3 className="text-sm font-semibold text-slate-700">سجل نشاط الزيارة</h3>
           </div>
@@ -279,7 +279,7 @@ export default function VisitDetailView({
             <div
               key={box.id}
               onClick={() => onSelectBox(box.id)}
-              className="bg-slate-50 border border-transparent rounded-xl p-2.5 sm:p-4 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm cursor-pointer min-h-[80px]"
+              className="card p-2.5 sm:p-4 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm cursor-pointer min-h-[80px]"
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-[10px] sm:text-xs font-medium text-slate-500 truncate">
@@ -302,7 +302,7 @@ export default function VisitDetailView({
         })}
 
         {visit.boxes.length === 0 && (
-          <div className="col-span-full bg-white rounded-xl border border-slate-200 p-8 sm:p-12 text-center">
+          <div className="col-span-full card p-8 sm:p-12 text-center">
             <Package className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-sm text-slate-400">لا توجد صناديق بعد — أضف صندوقاً للبدء</p>
           </div>

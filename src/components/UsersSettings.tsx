@@ -93,7 +93,7 @@ export default function UsersSettings({
         </h2>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors min-h-[44px]"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium transition-colors min-h-[44px]"
         >
           <Plus className="w-4 h-4" />
           إضافة مستخدم
@@ -101,7 +101,7 @@ export default function UsersSettings({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden sm:block bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="hidden sm:block card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -189,14 +189,14 @@ export default function UsersSettings({
       {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {users.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <div className="card p-8 text-center">
             <p className="text-sm text-slate-400">لا يوجد مستخدمون.</p>
           </div>
         ) : (
           users.map((user) => (
             <div
               key={user.id}
-              className={`bg-white rounded-xl border border-slate-200 p-3.5 ${!user.active ? "opacity-50" : ""}`}
+              className={`card p-3.5 ${!user.active ? "opacity-50" : ""}`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="min-w-0 flex-1">
@@ -337,7 +337,7 @@ export default function UsersSettings({
                 <button
                   type="submit"
                   disabled={!name.trim() || !pin.trim()}
-                  className="flex-1 h-11 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
+                  className="flex-1 h-11 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[44px]"
                 >
                   {editingUser ? "حفظ التعديلات" : "إضافة"}
                 </button>

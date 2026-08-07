@@ -80,7 +80,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={!username.trim() || !pin.trim() || loading}
-            className="w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full h-12 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? "جاري التحقق..." : "دخول"}
           </button>
