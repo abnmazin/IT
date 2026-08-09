@@ -149,7 +149,7 @@ export default function DeveloperSettings({
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-50 to-indigo-50/30">
+    <div className="min-h-full bg-gradient-to-br from-slate-50 via-slate-50 to-sky-50/30">
       <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-5">
 
         {/* Header */}

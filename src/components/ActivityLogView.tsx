@@ -66,9 +66,9 @@ const TYPE_COLORS: Record<ActivityType, string> = {
   return_items: "bg-amber-50 text-amber-600",
   add_user: "bg-purple-50 text-purple-600",
   delete_user: "bg-red-50 text-red-600",
-  edit_user: "bg-blue-50 text-blue-600",
+  edit_user: "bg-sky-50 text-sky-600",
   add_category: "bg-emerald-50 text-emerald-600",
-  edit_category: "bg-blue-50 text-blue-600",
+  edit_category: "bg-sky-50 text-sky-600",
   delete_category: "bg-red-50 text-red-600",
 };
 
