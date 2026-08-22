@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MapPin, Lock, User as UserIcon, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginAsGuest } = useAuth();
   const [username, setUsername] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
@@ -83,6 +83,15 @@ export default function LoginPage() {
             className="w-full h-12 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? "جاري التحقق..." : "دخول"}
+          </button>
+
+          <button
+            type="button"
+            onClick={loginAsGuest}
+            className="w-full h-11 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+          >
+            <UserIcon className="w-3.5 h-3.5" />
+            الدخول كضيف (تجريبي — بدون قاعدة بيانات)
           </button>
         </form>
 

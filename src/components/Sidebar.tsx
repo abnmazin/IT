@@ -1,6 +1,7 @@
 "use client";
 
 import { View, UserRole } from "@/types";
+import { isDemoSession } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Warehouse,
@@ -51,6 +52,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
   const bottomItems = allBottomItems.filter((item) => item.roles.includes(userRole));
+  const isDemo = isDemoSession();
 
   return (
     <>
@@ -84,6 +86,20 @@ export default function Sidebar({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {isDemo && (
+          <div className="shrink-0 border-b border-slate-700/50 px-3 py-2">
+            {collapsed ? (
+              <div className="flex justify-center" title="وضع تجريبي — بيانات وهمية">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              </div>
+            ) : (
+              <span className="block text-center text-[10px] font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2 py-1.5">
+                وضع تجريبي — بيانات وهمية
+              </span>
+            )}
+          </div>
+        )}
 
         <nav className="flex-1 py-3 px-2 space-y-1">
           {navItems.map((item) => {

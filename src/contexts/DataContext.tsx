@@ -21,26 +21,9 @@ import {
   ArchivedVisit,
   defaultCategories,
 } from "@/types";
-import {
-  subscribeWarehouseItems,
-  subscribeVisits,
-  subscribeCategories,
-  subscribeActivityLog,
-  subscribeUsers,
-  subscribeArchivedVisits,
-  saveWarehouseItem,
-  deleteWarehouseItemFS,
-  saveVisit,
-  deleteVisitFS,
-  saveArchivedVisit,
-  saveCategory,
-  deleteCategoryFS,
-  saveUser,
-  deleteUserFS,
-  addActivityEntry,
-  seedFirestoreIfNeeded,
-  migrateWarehouseItems,
-} from "@/lib/firestore";
+import * as fsBackend from "@/lib/firestore";
+import * as demoBackend from "@/lib/demoBackend";
+import { isDemoSession } from "./AuthContext";
 
 interface DataContextType {
   warehouseItems: WarehouseItem[];
@@ -100,7 +83,9 @@ function today() {
   return new Date().toISOString().split("T")[0];
 }
 
-function deployToWarehouse(warehouseItems: WarehouseItem[], boxItems: BoxItem[]) {
+type SaveWarehouseItem = (item: WarehouseItem) => Promise<void>;
+
+function deployToWarehouse(saveItem: SaveWarehouseItem, warehouseItems: WarehouseItem[], boxItems: BoxItem[]) {
   const groups: Record<string, { qty: number; serials: string[] }> = {};
   for (const bi of boxItems) {
     const g = groups[bi.warehouseItemId] || { qty: 0, serials: [] };
@@ -117,19 +102,20 @@ function deployToWarehouse(warehouseItems: WarehouseItem[], boxItems: BoxItem[])
     if (!wh) continue;
     if (g.serials.length > 0) {
       const remaining = (wh.serials || []).filter((s) => !g.serials.includes(s));
-      saveWarehouseItem({
+      saveItem({
         ...wh,
         serials: remaining,
         serialNumber: remaining.length === 1 ? remaining[0] : undefined,
         totalQty: remaining.length,
       });
     } else if (g.qty > 0) {
-      saveWarehouseItem({ ...wh, totalQty: Math.max(0, wh.totalQty - g.qty) });
+      saveItem({ ...wh, totalQty: Math.max(0, wh.totalQty - g.qty) });
     }
   }
 }
 
 function restoreToWarehouse(
+  saveItem: SaveWarehouseItem,
   warehouseItems: WarehouseItem[],
   restoreList: { warehouseItemId: string; serials?: string[]; qty: number }[]
 ) {
@@ -148,14 +134,14 @@ function restoreToWarehouse(
     if (!wh) continue;
     if (g.serials.length > 0) {
       const merged = Array.from(new Set([...(wh.serials || []), ...g.serials]));
-      saveWarehouseItem({
+      saveItem({
         ...wh,
         serials: merged,
         serialNumber: merged.length === 1 ? merged[0] : undefined,
         totalQty: merged.length,
       });
     } else if (g.qty > 0) {
-      saveWarehouseItem({ ...wh, totalQty: wh.totalQty + g.qty });
+      saveItem({ ...wh, totalQty: wh.totalQty + g.qty });
     }
   }
 }
@@ -179,6 +165,27 @@ function resetToTemplate(visit: Visit): Visit {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const [isDemo] = useState(() => isDemoSession());
+  const backend = isDemo ? demoBackend : fsBackend;
+  const {
+    subscribeUsers,
+    saveUser,
+    deleteUserFS,
+    subscribeWarehouseItems,
+    saveWarehouseItem,
+    deleteWarehouseItemFS,
+    subscribeVisits,
+    saveVisit,
+    deleteVisitFS,
+    subscribeCategories,
+    saveCategory,
+    deleteCategoryFS,
+    subscribeActivityLog,
+    addActivityEntry,
+    subscribeArchivedVisits,
+    saveArchivedVisit,
+  } = backend;
+
   const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -190,13 +197,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const prevLogLength = useRef(0);
 
-  // Subscribe to Firestore
+  // Subscribe to data source (Firestore or in-memory demo backend)
   useEffect(() => {
     let unsubs: (() => void)[] = [];
 
     async function init() {
-      await seedFirestoreIfNeeded();
-      await migrateWarehouseItems(defaultCategories);
+      if (!isDemo) {
+        await fsBackend.seedFirestoreIfNeeded();
+        await fsBackend.migrateWarehouseItems(defaultCategories);
+      }
       unsubs = [
         subscribeWarehouseItems((items) => { setWarehouseItems(items); setLoading(false); }),
         subscribeVisits((v) => setVisits(v)),
@@ -209,6 +218,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     init();
     return () => unsubs.forEach((u) => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Track new notifications
@@ -342,7 +352,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       if (visit.status === "inactive" && nextStatus === "active") {
         saveVisit({ ...visit, status: "active" });
-        deployToWarehouse(warehouseItems, visit.boxes.flatMap((b) => b.items));
+        deployToWarehouse(saveWarehouseItem, warehouseItems, visit.boxes.flatMap((b) => b.items));
         logActivity("activate_visit", `تفعيل زيارة: ${visit.name}`, undefined, visitId);
       } else if (visit.status === "collecting" && nextStatus === "completed") {
         const restoreList: { warehouseItemId: string; serials?: string[]; qty: number }[] = [];
@@ -366,7 +376,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             return { ...bi, returnedQty, status: (bi.status || (returnedQty === (bi.originalQty || bi.qty) ? "returned" : bi.consumable ? "consumed" : "missing")) as BoxItem["status"] };
           }),
         }));
-        restoreToWarehouse(warehouseItems, restoreList);
+        restoreToWarehouse(saveWarehouseItem, warehouseItems, restoreList);
         const archive: ArchivedVisit = {
           id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           visitId: visit.id,
@@ -386,7 +396,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (serials.length > 0) return { warehouseItemId: bi.warehouseItemId, serials, qty: 0 };
           return { warehouseItemId: bi.warehouseItemId, qty: bi.originalQty || bi.qty };
         });
-        restoreToWarehouse(warehouseItems, restoreList);
+        restoreToWarehouse(saveWarehouseItem, warehouseItems, restoreList);
         saveVisit(resetToTemplate(visit));
         logActivity("deactivate_visit", `إلغاء تفعيل زيارة: ${visit.name}`, undefined, visitId);
       } else {
@@ -407,7 +417,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const visit = visits.find((v) => v.id === visitId);
       if (!visit) return;
       saveVisit({ ...visit, status: "active", year: year || undefined, hijriDate: hijriDate || undefined });
-      deployToWarehouse(warehouseItems, visit.boxes.flatMap((b) => b.items));
+      deployToWarehouse(saveWarehouseItem, warehouseItems, visit.boxes.flatMap((b) => b.items));
       logActivity("activate_visit", `تفعيل زيارة: ${visit.name} — ${year}`, undefined, visitId);
     },
     [visits, warehouseItems, logActivity]
@@ -450,7 +460,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           };
         }),
       }));
-      restoreToWarehouse(warehouseItems, restoreList);
+      restoreToWarehouse(saveWarehouseItem, warehouseItems, restoreList);
       const archive: ArchivedVisit = {
         id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         visitId: visit.id,

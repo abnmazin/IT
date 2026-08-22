@@ -10,6 +10,12 @@
 /.next/
 /out/
 
+# capacitor / tauri build artifacts
+/dist/
+/android/app/build/
+/src-tauri/target/
+/src-tauri/gen/
+
 # production
 /build
 

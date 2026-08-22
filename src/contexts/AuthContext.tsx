@@ -9,6 +9,7 @@ interface AuthContextType {
   users: User[];
   loading: boolean;
   login: (username: string, pin: string) => boolean;
+  loginAsGuest: () => void;
   logout: () => void;
 }
 
@@ -17,11 +18,23 @@ const AuthContext = createContext<AuthContextType>({
   users: [],
   loading: true,
   login: () => false,
+  loginAsGuest: () => {},
   logout: () => {},
 });
 
 const USERS_CACHE_KEY = "it-inventory-users-cache";
 const SESSION_KEY = "it-inventory-user";
+const DEMO_KEY = "it-inventory-demo";
+
+export const GUEST_USER: User = { id: "guest", name: "ضيف", role: "admin", pin: "", active: true };
+
+export function isDemoSession(): boolean {
+  try {
+    return typeof window !== "undefined" && localStorage.getItem(DEMO_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -48,6 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoSession()) {
+      setUser(GUEST_USER);
+      setLoading(false);
+      return;
+    }
+
     // Start with cached users so offline login works immediately
     const cached = getCachedUsers();
     if (cached.length > 0) {
@@ -103,15 +122,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [users]);
 
+  const loginAsGuest = useCallback(() => {
+    try {
+      localStorage.setItem(DEMO_KEY, "1");
+      localStorage.setItem(SESSION_KEY, GUEST_USER.id);
+    } catch {}
+    setUser(GUEST_USER);
+  }, []);
+
   const logout = useCallback(() => {
+    const wasDemo = isDemoSession();
     setUser(null);
     try {
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(DEMO_KEY);
     } catch {}
+    if (wasDemo && typeof window !== "undefined") {
+      window.location.assign("/");
+    }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, users, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, users, loading, login, loginAsGuest, logout }}>
       {children}
     </AuthContext.Provider>
   );
